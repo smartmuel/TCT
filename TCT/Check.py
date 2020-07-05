@@ -62,7 +62,7 @@ class Other(object):
             Components_List = [Vision_API.DF_IP()[0]]
         Components_List += [i for i in DTCT.DP_Info.values()]
         Components_List.append(DTCT["Vision_IP"])
-        while (time.perf_counter() - start < (Fail_Tim e *60)):
+        while (time.perf_counter() - start < (Fail_Time *60)):
             for i in Components_List:
                 flag = flag and ping(i)
             if flag:
