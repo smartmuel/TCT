@@ -8,12 +8,12 @@ def install(package):
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install("Selenium")
-install("requests")
-install("paramiko")
-install("pandas")
-install("bps_restpy")
-install("chromedriver_autoinstaller")
+Lib = ["Selenium", "requests","paramiko","pandas","bps_restpy","chromedriver_autoinstaller"]
+for i in Lib:
+    try:
+        install(i)
+    except:
+        print(f"Falled to Download {i}")
 
 setuptools.setup(
     name="TCT", # Replace with your own username
