@@ -1,8 +1,5 @@
-import os
-cwd = os.getcwd()
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-from TestCaseTools import *
-os.chdir(cwd)
+from . import TestCaseTools
+from TestCaseTools  import *
 
 number = 77
 
