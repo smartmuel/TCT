@@ -1,49 +1,9 @@
-import json,shutil
-with open("Data_For_TCT.json","w") as read_file:
-    TCT_json = {
-    "Attack_Number": 10,
-    "BP_AppSim_Max_Number": 8,
-    "BP_AppSim_legit": [
-        1,
-        2
-    ],
-    "BP_IP": "10.174.180.45",
-    "BP_Password": "shmuel",
-    "BP_Reserve_Port_1": 0,
-    "BP_Reserve_Port_2": 1,
-    "BP_Reserve_Slot": 3,
-    "BP_Session_Max_Number": 8,
-    "BP_Test": "SAM_FD",
-    "BP_Username": "shmuel",
-    "DF_IP_Secondary": "10.170.19.117",
-    "DF_Password": "radware",
-    "DF_Username": "root",
-    "DP_Password": "radware1",
-    "DP_Ports": [
-        "T-1",
-        "14"
-    ],
-    "DP_Username": "radware",
-    "Driver_Path": "E:\\Hi\\Driver\\chromedriver.exe",
-    "FD_IP": "10.170.19.104",
-    "LOG_FILE": "syslog_AMS.log",
-    "MSSP_Dash_URL": "https://10.170.17.114/dashboard#/dashboard?r=5e579021d29d2001cc0593b8",
-    "MSSP_Password": "radware",
-    "MSSP_Username": "admin@radware.com",
-    "OngoingProtections": 1,
-    "PO_Attack_Number": 1,
-    "SSH_IP": "10.170.9.136",
-    "SSH_Password": "radware",
-    "SSH_Username": "root",
-    "Syslog_IP": "10.170.19.52",
-    "Test_OngoingProtections": 1,
-    "Vision_IP": "10.170.19.115",
-    "Vision_Password": "radware!Q2w3e4r",
-    "Vision_Username": "TCT"
-}
-    json.dump(TCT_json, read_file, ensure_ascii=False, indent=4, sort_keys=True)
-        
+import os
+cwd = os.getcwd()
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 from TestCaseTools import *
+os.chdir(cwd)
+
 number = 77
 
 
@@ -115,10 +75,3 @@ class Other_Check(object):
             print("#" * number)
             time.sleep(1)
         return flag
-
-if __name__ == "__main__":
-    print(Other_Check.Ping_All_Components(True))
-    print(DP_Check.Port_Error(True))
-    os.remove("Data_For_TCT.json")
-    os.rmdir("ScreenShots")
-    shutil.rmtree("__pycache__", ignore_errors=True)
