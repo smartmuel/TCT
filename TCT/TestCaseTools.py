@@ -1,0 +1,1240 @@
+# !/usr/bin/env python
+
+import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys
+from inspect import currentframe, getframeinfo
+
+try:
+    from selenium import webdriver
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    from selenium.common.exceptions import TimeoutException
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver import ActionChains
+    from selenium.webdriver.chrome.options import Options
+except:
+    print(getframeinfo(currentframe()).lineno, "Selenium library is missing")  # fix - add flag
+    pass
+try:
+    import requests
+    # pass
+except:
+    print(getframeinfo(currentframe()).lineno,
+          "requests is not installed, api functionality disabled")  # fix - add flag
+    # pass
+try:
+    from bps_restpy.bps_restpy_v1.bpsRest import *
+    # pass
+except:
+    print(getframeinfo(currentframe()).lineno, "Breaking Point libraries are missing")  # fix - add flag
+    # pass
+try:
+    import paramiko
+    # pass
+except:
+    print(getframeinfo(currentframe()).lineno,
+          "paramiko is not installed, ssh functionality disabled")  # fix - add flag
+    # pass
+try:
+    import chromedriver_autoinstaller
+    # pass
+except:
+    print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
+    # pass
+
+"""cwd = current work directory"""
+cwd = os.getcwd()
+debug_prints_flag = False
+DP_index = "0"
+
+
+class Configuration(object):
+    def __init__(self, json_file):
+        self.path = os.getcwd()
+        self.DP_Info = dict()
+        self.json_file = json_file
+        with open(json_file, "r") as read_file:
+            self.json = json.load(read_file)
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
+        fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
+        response = requests.post(url, verify=False, data=None, json=fill_json)
+        # self.flag = response.status_code
+        cookie = response.cookies
+        url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices"
+        api = requests.get(url, verify=False, data=None, cookies=cookie).json()
+        try:
+            for i in api["MitigationDevices"]:
+                if i["type"] == "DefensePro":
+                    self.DP_Info[i["dp_name"]] = i["address"]
+        except:
+            print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
+        requests.post(url, verify=False, cookies=cookie)
+
+    def __setitem__(self, key, value):
+        self.json[key] = value
+
+    def __getitem__(self, item):
+        return self.json[item]
+
+    def save(self):
+        os.chdir(self.path)
+        with open(self.json_file, 'w') as outfile:
+            json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
+        os.chdir(cwd)
+
+
+try:
+    os.chdir('..')
+    DTCT = Configuration("Data_For_TCT.json")
+    os.chdir(cwd)
+except:
+    try:
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        DTCT = Configuration("Data_For_TCT.json")
+        os.chdir(cwd)
+    except:
+        try:
+            os.chdir(cwd)
+            path = pathlib.Path().absolute()
+            DTCT_Path = ""
+            for r, d, f in os.walk(path):
+                if "Data_For_TCT.json" in f:
+                    DTCT_Path = os.path.join(r, "Data_For_TCT.json")
+                    break
+            DTCT = Configuration(DTCT_Path)
+        except:
+            print(getframeinfo(currentframe()).lineno, "Configure the json and then work with the package")
+            exit()
+
+
+def ping(host):
+    """
+    Returns True if host (str) responds to a ping request.
+    Remember that a host may not respond to a ping (ICMP) request even if the host name is valid.
+    """
+
+    # Option for the number of packets as a function of
+    param = '-n' if platform.system().lower() == 'windows' else '-c'
+
+    # Building the command. Ex: "ping -c 1 google.com"
+    command = ['ping', param, '1', host]
+
+    return subprocess.call(command) == 0
+
+
+# Decorator for ScreenShots and more
+def prefix_decorator(prefix=""):
+    def decorator_test(function):
+        def wrapper_test(self, *args, **kwargs):
+            start = time.perf_counter()
+            self.Vision()
+            result = function(self, *args, **kwargs)
+            if prefix:
+                try:
+                    os.makedirs(os.path.join(Driver.path, self.Main_Name, self.Name))
+                except FileExistsError:
+                    pass
+                os.chdir(os.path.join(Driver.path, self.Main_Name, self.Name))
+                if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
+                    N = f"{self.Name}_{prefix}_{DP_index}.png"
+                else:
+                    N = f"{self.Name}_{prefix}.png"
+                # fix
+                self.driver.save_screenshot(N)
+                os.chdir(cwd)
+                if self.flag_change_size:
+                    self.Screen_Size()
+            print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
+            return result
+
+        return wrapper_test
+
+    return decorator_test
+
+
+class Driver(object):
+    __slots__ = ("__dict__", "driver", "Name", "url", "Driver_Path")
+    try:
+        os.mkdir("ScreenShots")
+    except FileExistsError:
+        pass
+    path = os.path.join(cwd, "ScreenShots")
+    flag_change_size = False
+
+    def __init__(self, Name="Test", url=""):
+        self.start = time.perf_counter()
+        self.Driver_Path = DTCT["Driver_Path"]
+
+        # Opening Chrome Driver
+        options = Options()
+        options.add_experimental_option("prefs", {
+            "download.default_directory": rf"{cwd}",
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True
+        })
+        options.add_argument('--ignore-certificate-errors')
+        # option = webdriver.ChromeOptions()
+        # option.add_argument('--ignore-certificate-errors')
+        try:
+            chromedriver_autoinstaller.install()
+            self.driver = webdriver.Chrome(chrome_options=chrome_options)
+        except:
+            try:
+                self.driver = webdriver.Chrome(self.Driver_Path, options=options)
+            except:
+                # finding chromedriver location
+                os.chdir(os.path.dirname(os.path.realpath(__file__)))
+                os.chdir("..")
+                path = pathlib.Path().absolute()
+                for r, d, f in os.walk(path):
+                    if "chromedriver.exe" in f:
+                        self.Driver_Path = os.path.join(r, "chromedriver.exe")
+                        DTCT["Driver_Path"] = self.Driver_Path
+                        self.driver = webdriver.Chrome(self.Driver_Path, chrome_options=options)
+                        break
+                else:
+                    print(getframeinfo(currentframe()).lineno, "You need to have chromedriver to open chrome.")
+                    exit()
+                os.chdir(cwd)
+
+        self.Name = Name
+        self.Main_Name = Name.split("_")[0]
+        self.Password_Done = False
+
+        if url == "":
+            self.Vision()
+        if url != "":
+            self.Get(url)
+
+    def __call__(self):
+        return self.driver
+
+    def Get(self, URL):
+        self.driver.get(URL)
+        self.driver.fullscreen_window()
+
+    def Screen_Size(self, size=100):
+        if size != 100:
+            try:
+                self.Get("chrome://settings/")
+                self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({size / 100:.1f});')
+                # self.driver.execute_script(f"document.body.style.zoom='{size}%'")
+                self.flag_change_size = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Screen_Size_Error")
+        else:
+            self.Get("chrome://settings/")
+            self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom(1.0);')
+            # self.driver.execute_script("document.body.style.zoom='100%'")
+            self.flag_change_size = False
+
+    def Close(self):
+        self.driver.close()
+        self.driver.quit()
+        DTCT.save()
+
+    # Driver enter Vision
+    def Vision(self):
+        self.Get(f"https://{DTCT['Vision_IP']}/")
+        delay = 5  # seconds
+        if time.perf_counter() - self.start > 1200:
+            self.Password_Done = False
+        if not self.Password_Done:
+            try:
+                self.Wait(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input")
+                self.Fill(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input",
+                    DTCT["Vision_Username"], click=False, Enter=False)
+                self.Fill(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
+                    DTCT["Vision_Password"], click=False)
+                self.Click(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
+                """                WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CSS_SELECTOR,
+                                                                                        '#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input')))
+                print(getframeinfo(currentframe()).lineno,"Vision is ready!")
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input").clear()
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input").send_keys(
+                    DTCT["Vision_Username"])
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input").clear()
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input").send_keys(
+                    DTCT["Vision_Password"])
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button").click()"""
+                # self.Wait("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.sc-kEYyzF.LcMkd > div > div > span.ant-alert-message",delay=5)
+            except TimeoutException:
+                print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
+            try:
+                self.driver.find_element_by_css_selector(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.sc-kEYyzF.LcMkd > div > di")
+                if time.perf_counter() - self.start > 1200:
+                    self.Close()
+                    exit()
+                self.Vision()
+            except:
+                pass
+            self.start = time.perf_counter()
+            self.Password_Done = True
+        try:
+            self.Wait("gwt-debug-DevicesTree_Node_" + list(DTCT.DP_Info.keys())[0], "ID", 10)
+            try:
+                self.driver.find_element_by_id('gwt-debug-TopicsNode_dp.setup.tree.sw_management-content')
+                self.Wait('gwt-debug-rsFSapplList_Header', "ID")
+            except:
+                try:
+                    self.driver.find_element_by_id(
+                        'gwt-debug-TopicsNode_am.system.tree.generalSettings.basicParameters-content')
+                    self.Wait('gwt-debug-managementIp_Widget', "ID")
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Fix")
+            print(getframeinfo(currentframe()).lineno, "HOME is ready!")
+        except TimeoutException:
+            print(getframeinfo(currentframe()).lineno, "HOME took too much time!")
+
+    # Driver enter MSSP
+    def MSSP(self):
+        self.Get(DTCT["MSSP_Dash_URL"])
+        delay = 5  # seconds
+        try:
+            WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.NAME, 'username')))
+            print(getframeinfo(currentframe()).lineno, "MSSP is ready!")
+            self.driver.find_element_by_name("username").send_keys(DTCT["MSSP_Username"])
+            self.driver.find_element_by_name("password").send_keys(DTCT["MSSP_Password"])
+            self.driver.find_element_by_class_name("btnLogin").click()
+        except TimeoutException:
+            print(getframeinfo(currentframe()).lineno, "MSSP took too much time!")
+        self.driver.fullscreen_window()
+
+    # Fill Text
+    def Fill(self, ID, Text, Type="auto", Enter=True, click=True, Arrow_Down_After=0, Arrow_Down_Before=0, delay=5,
+             **kwargs):
+        def IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before):
+            if click:
+                myElem.click()
+            myElem.clear()
+            myElem.send_keys(Text)
+            if Arrow_Down_Before:
+                for j in range(Arrow_Down_Before):
+                    myElem.send_keys(Keys.ARROW_DOWN)
+            if Enter:
+                myElem.send_keys(Keys.ENTER)
+            if Arrow_Down_After:
+                for j in range(Arrow_Down_After):
+                    myElem.send_keys(Keys.ARROW_DOWN)
+
+        ID = ID.strip()
+        Type = Type.lower()
+        if "auto" in Type:
+            for i in range(10):
+                if ID[0] == "#" or " > " in ID:
+                    if self.Wait(ID, "CSS", delay):
+                        try:
+                            myElem = self.driver.find_element_by_css_selector(ID)
+                            IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before)
+                            break
+                        except:
+                            print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                elif ID[0] == "/":
+                    if self.Wait(ID, "xpath", delay):
+                        try:
+                            myElem = self.driver.find_element_by_xpath(ID)
+                            IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before)
+                            break
+                        except:
+                            print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                else:
+                    if self.Wait(ID, "ID", delay):
+                        try:
+                            myElem = self.driver.find_element_by_id(ID)
+                            IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before)
+                            break
+                        except:
+                            print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                    elif self.Wait(ID, "Class", delay):
+                        try:
+                            myElem = self.driver.find_element_by_class_name(ID)
+                            IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before)
+                            break
+                        except:
+                            print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+
+        else:
+            for i in range(1000):
+                if "css" in Type:
+                    try:
+                        myElem = WebDriverWait(self.driver, delay).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                        myElem = self.driver.find_element_by_css_selector(ID).click()
+                        myElem.send_keys(Text)
+                        if Enter:
+                            myElem.send_keys(Keys.ENTER)
+                        # Fail = False
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                        # Fail = True
+
+                elif "id" in Type:
+                    try:
+                        myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                        myElem = self.driver.find_element_by_id(ID)
+                        if Arrow_Down_Before:
+                            myElem.send_keys(Keys.ARROW_DOWN)
+                        if Text != False:
+                            myElem.send_keys(Text)
+                        if Enter:
+                            myElem.send_keys(Keys.ENTER)
+                        if Arrow_Down_After > 0:
+                            for j in range(Arrow_Down_After):
+                                myElem.send_keys(Keys.ARROW_DOWN)
+                            myElem.send_keys(Keys.ENTER)
+                        # Fail = False
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                        # Fail = True
+
+                else:
+                    try:
+                        myElem = WebDriverWait(self.driver, delay).until(
+                            EC.presence_of_element_located((By.CLASS_NAME, ID)))
+                        myElem = self.driver.find_element_by_class_name(ID)
+                        myElem.send_keys(Text)
+                        myElem.send_keys(Keys.ENTER)
+                        # Fail = False
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
+                        # Fail = True
+
+    # Wait for target Element type in current page
+    def Wait(self, ID, Type="auto", delay=10, **kwargs):
+        Type = Type.lower()
+        ID = ID.strip()
+        if "auto" in Type:
+            if ID[0] == "#" or " > " in ID:
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                    return True
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+            elif ID[0] == "/":
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.XPATH, ID)))
+                    return True
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                    return False
+            else:
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                    return True
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                    return False
+        elif "css" in Type:
+            try:
+                myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                return True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                return False
+        elif "class" in Type:
+            try:
+                myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, ID)))
+                return True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                return False
+        elif "id" in Type:
+            try:
+                myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                return True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                return False
+        elif "xpath" in Type:
+            try:
+                myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.XPATH, ID)))
+                return True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+                return False
+
+    # Clicking on target Element type in current page
+    def Click(self, ID, Type="auto", wait="No", delay=5, **kwargs):
+        ID = ID.strip()
+        Type = Type.lower()
+        if "auto" in Type:
+            for i in range(10):
+                if ID[0] == "#" or " > " in ID:
+                    try:
+                        self.Wait(ID)
+                        self.driver.find_element_by_css_selector(ID).click()
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                elif ID[0] == "/":
+                    try:
+                        self.Wait(ID)
+                        self.driver.find_element_by_xpath(ID).click()
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                else:
+                    try:
+                        self.Wait(ID)
+                        self.driver.find_element_by_id(ID).click()
+                        break
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+
+            if ID == '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div':
+                self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
+
+            elif ID == "gwt-debug-TopicsStack_TrafficMonitoring_tab":
+                try:
+                    myElem = self.driver.find_element_by_css_selector(
+                        '#gwt-debug-TopicsNode_bdos-traffic-monitoring-reports-content')
+                    if myElem.is_displayed():
+                        self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
+                except:
+                    try:
+                        myElem = self.driver.find_element_by_css_selector(
+                            '#gwt-debug-TopicsNode_security-dashboard-table-content')
+                        if myElem.is_displayed():
+                            self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
+                    except:
+                        pass
+
+            elif ID == 'gwt-debug-Global_defenseFlow_Old':
+                self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
+
+            elif 'gwt-debug-DevicesTree_Node_' in ID:
+                self.Click("gwt-debug-SoftwareList")
+
+            elif ID == "gwt-debug-TopicsNode_traffic-utilization-report-content":
+                try:
+                    my = WebDriverWait(self.driver, 10).until(
+                        EC.frame_to_be_available_and_switch_to_it("Concurrent_Connections_Report"))
+                    self.Wait(
+                        "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
+                    self.driver.switch_to.default_content()
+                    self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
+                except:
+                    pass
+
+            elif wait != "No":
+                self.Wait(wait)
+
+        elif "css" in Type:
+            for i in range(1000):
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                    self.driver.find_element_by_css_selector(ID).click()
+                    # Fail = False
+                    break
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    # Fail = True
+            else:
+                print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
+
+            if ID == '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div':
+                self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
+
+            elif wait != "No":
+                self.Wait(wait, Type)
+
+        elif "id" in Type:
+            for i in range(1000):
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                    self.driver.find_element_by_id(ID).click()
+                    # Fail = False
+                    break
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    # Fail = True
+            else:
+                if ID == 'gwt-debug-TopicsNode_traffic-utilization-report-content':
+                    # Fail = False
+                    self.Click('gwt-debug-TopicsStack_TrafficMonitoring_tab')
+                    self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
+                else:
+                    print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
+
+            if ID == "gwt-debug-TopicsStack_TrafficMonitoring_tab":
+                try:
+                    myElem = self.driver.find_element_by_css_selector(
+                        '#gwt-debug-TopicsNode_bdos-traffic-monitoring-reports-content')
+                    if myElem.is_displayed():
+                        self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
+                except:
+                    try:
+                        myElem = self.driver.find_element_by_css_selector(
+                            '#gwt-debug-TopicsNode_security-dashboard-table-content')
+                        if myElem.is_displayed():
+                            self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
+                    except:
+                        pass
+
+            elif ID == 'gwt-debug-Global_defenseFlow_Old':
+                self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
+
+            elif 'gwt-debug-DevicesTree_Node_' in ID:
+                self.Click("gwt-debug-SoftwareList")
+
+            elif ID == "gwt-debug-TopicsNode_traffic-utilization-report-content":
+                try:
+                    my = WebDriverWait(self.driver, 10).until(
+                        EC.frame_to_be_available_and_switch_to_it("Concurrent_Connections_Report"))
+                    self.Wait(
+                        "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
+                    self.driver.switch_to.default_content()
+                    self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
+                except:
+                    pass
+
+            elif wait != "No":
+                self.Wait(wait, Type)
+
+        elif "class" in Type:
+            for i in range(1000):
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(
+                        EC.presence_of_element_located((By.CLASS_NAME, ID)))
+                    self.driver.find_element_by_class_name(ID).click()
+                    # Fail = False
+                    break
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    # Fail = True
+            else:
+                print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
+            if wait != "No":
+                self.Wait(wait, Type)
+
+        elif "xpath" in Type:
+            for i in range(1000):
+                try:
+                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.XPATH, ID)))
+                    self.driver.find_element_by_xpath(ID).click()
+                    # Fail = False
+                    break
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    # Fail = True
+            else:
+                print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
+
+            if wait != "No":
+                self.Wait(wait, Type)
+
+        else:
+            print(getframeinfo(currentframe()).lineno, "No Such Type as " + Type)
+
+    # Click on target Element type on target iframe
+    def FrameS(self, frame, ROW_ID, Type="CSS", CLK="No_Text", fill="No_Text", **kwargs):
+        try:
+            my = WebDriverWait(self.driver, 10).until(EC.frame_to_be_available_and_switch_to_it(frame))
+        except:
+            print(getframeinfo(currentframe()).lineno, "No iframe")
+        if Type == "CSS":
+            try:
+                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ROW_ID)))
+                if fill != "No_Text":
+                    self.Fill(ROW_ID, fill, Type)
+                if CLK:
+                    self.driver.find_element_by_css_selector(CLK).click()
+            except:
+                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
+        elif Type == "CLASS":
+            try:
+                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, ROW_ID)))
+                if fill != "No_Text":
+                    self.Fill(ROW_ID, fill, Type)
+                if CLK:
+                    self.driver.find_element_by_id(By.CLASS_NAME).click()
+            except:
+                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
+        elif Type == "ID":
+            try:
+                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, ROW_ID)))
+                if fill != "No_Text":
+                    self.Fill(ROW_ID, fill, Type)
+                if CLK:
+                    self.driver.find_element_by_id(By.ID).click()
+            except:
+                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
+
+        self.driver.switch_to.default_content()
+
+    def Displayed(self, ID):
+        ID = ID.strip()
+        if self.Wait(ID):
+            if ID[0] == "#" or " > " in ID:
+                try:
+                    while (self.driver.find_element_by_css_selector(ID).is_displayed()):
+                        time.sleep(1)
+                except:
+                    pass
+            elif ID[0] == "/":
+                try:
+                    while (self.driver.find_element_by_xpath(ID).is_displayed()):
+                        time.sleep(1)
+                except:
+                    pass
+            else:
+                try:
+                    while (self.driver.find_element_by_id(ID).is_displayed()):
+                        time.sleep(1)
+                except:
+                    pass
+
+    ################################################################
+    # _________DF_Screenshots_______________
+
+    def DF_Configuration(self):
+        self.Click(
+            '#global-menu > nav > ul > li:nth-child(5) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.gzJDwN',
+            "CSS")
+        self.Click(
+            '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div',
+            Type="CSS")
+
+    @prefix_decorator("DF_OP")
+    def DF_Attack_Mitigation_Operation(self):
+        self.Click(
+            '#global-menu > nav > ul > li:nth-child(5) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.gzJDwN',
+            "CSS")
+        self.Click(
+            "#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(1) > div",
+            Type="CSS")
+        self.Wait(
+            "#df > div > div.dfc-main-content > div > div.dfc-dashboard-content > div > div:nth-child(1) > div > div.ReactVirtualized__Table__headerRow.sc-kPVwWT.cwEtzk",
+            Type="CSS", delay=100)
+        try:
+            elem = self.driver.find_element_by_css_selector(
+                '#df > div > div.dfc-main-content > div > div.dfc-dashboard-content > div > div.sc-hwwEjo.dlaYLh.sc-hqyNC.dvtIqr > div')
+            if elem.is_displayed():
+                self.DF_Attack_Mitigation_Operation()
+        except:
+            pass
+
+    @prefix_decorator("DF_PO_ON")
+    def DF_Ongoing_Protections(self):
+        self.DF_Configuration()
+        self.Click('gwt-debug-TopicsNode_Configuration.Operation.OngoingProtections-content',
+                   wait='gwt-debug-OngoingProtections_RowID_0_CellID_SEQUENCE')
+
+    @prefix_decorator("DF_PO")
+    def DF_Protected_Objects(self):
+        self.DF_Configuration()
+        self.Click("gwt-debug-TopicsNode_Configuration.Operation.ProtectedObjects-content",
+                   wait="gwt-debug-OperationsProtectedObjectsTable_RowID_0_CellID_name")
+
+    @prefix_decorator("DF_Traffic")
+    def DF_Traffic_Utillization(self):
+        self.DF_Configuration()
+        self.Click("gwt-debug-Security Monitoring")
+        self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
+        self.Click("#gwt-debug-TopicsNode_traffic-utilization-report-content", "CSS")
+        self.FrameS("Traffic_Utilization",
+                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select",
+                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
+        self.FrameS("Traffic_Utilization",
+                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select",
+                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
+        self.FrameS("Traffic_Utilization",
+                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect",
+                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect")
+
+    @prefix_decorator("DF_HA")
+    def DF_High_Availity(self):
+        self.DF_Configuration()
+        self.Click('gwt-debug-Configuration')
+        self.Click('#gwt-debug-TopicsNode_Configuration\.HA-content', 'CSS')
+        self.Wait('#gwt-debug-STANDBY_IP_Widget')
+
+    @prefix_decorator("DF_Attack_Table")
+    def DF_Current_Attack_Table(self):
+        self.DF_Configuration()
+        self.Click("gwt-debug-Security Monitoring")
+        self.FrameS('security-dashboard-table',
+                    'body > div.main-view.ng-scope > ng-include > section > section > section:nth-child(2) > div.the-table > rw-table2 > section > div.table-wrapper > div.table-body-wrapper > table > tbody > tr:nth-child(1)')
+        self.Click("#gwt-debug-ConfigTab_Tab", "CSS")
+
+    @prefix_decorator("DF_Workflow_Rules")
+    def DF_Workflow_Rules(self):
+        self.DF_Configuration()
+        self.Click("gwt-debug-Configuration")
+        self.Click("gwt-debug-TopicsStack_Configuration.SecuritySettings")
+        self.Click("gwt-debug-TopicsNode_Configuration.SecuritySettings.Workflows-content")
+        self.Click("gwt-debug-Workflows_RowID_0")  # FIX
+        self.Click("gwt-debug-Workflows_EDIT")
+        time.sleep(5)
+
+    @prefix_decorator("DF_BGP_Flowspec")
+    def DF_BGP_Flowspec(self):
+        self.DF_Configuration()
+        self.Click("gwt-debug-TopicsNode_Monitoring.Operation.BGP-content")
+        self.Click("gwt-debug-TopicsNode_Monitoring.Operation.BGP.FlowSpecs-content")
+
+    ################################################################
+    # _________DP_Screenshots_______________
+
+    def DP_Screenshots(self):
+        global DP_index
+        for i in DTCT.DP_Info.keys():
+            DP_index = i
+            self.One_DP_Traffic_Utillization()
+            self.One_DP_Current_Attack_Table()
+
+    @prefix_decorator(f"DP_Traffic")
+    def One_DP_Traffic_Utillization(self):
+        self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
+        self.Click('gwt-debug-Security Monitoring')
+        self.Click('#gwt-debug-TopicsStack_TrafficMonitoring_tab', "CSS")
+        self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
+        self.FrameS('Traffic_Utilization_Report', 'legend-group', Type="Class")
+        try:
+            myElem = self.driver.find_element_by_css_selector('#loading-image')
+            while myElem.is_displayed():
+                pass
+        except:
+            pass
+
+    @prefix_decorator(f"DP_Current_Attack")
+    def One_DP_Current_Attack_Table(self):
+        self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
+        self.Click('gwt-debug-Security Monitoring')
+        self.FrameS('security-dashboard-table', 'table-row', Type="CLASS")
+
+    ################################################################
+    # _________AMS_Screenshots_______________
+
+    @prefix_decorator("DP_Monitoring")
+    def DP_Monitoring(self):
+        self.Get(f"https://{DTCT['Vision_IP']}/dpMonitoring")
+        self.Wait("vertical-legend__area", Type="Class")
+        self.Wait("policiesListContent", Type='Class')
+        self.Wait(
+            "#bf2c5f9d-ccf3-47a9-bfb4-73dcf33681f5 > div.wrapper > div > div.area-chart__wrapper > canvas.chartjs-render-monitor",
+            delay=15)
+        try:
+            action = ActionChains(self.driver)
+            action.move_to_element(self.driver.find_element_by_css_selector(
+                "#bf2c5f9d-ccf3-47a9-bfb4-73dcf33681f5 > div.wrapper > div > div.area-chart__wrapper > canvas:nth-child(2)"))
+        except:
+            pass
+
+    @prefix_decorator("DF_Analytics")
+    def DF_Analytics(self):
+        self.Screen_Size(90)
+        self.Get(f"https://{DTCT['Vision_IP']}/dfAnalytics")
+        self.Wait(
+            "#\\32 4307c07-ab22-4f0b-9f17-e9c7d7b48687 > div.wrapper > div > div.horizontal-legend.regular-mode > div > div:nth-child(2) > div > div",
+            delay=60)
+
+    ################################################################
+    # _________External_Screenshots_______________
+
+    @prefix_decorator("MSSP")
+    def MSSP_Dashboard_Screenshot(self):
+        self.MSSP()
+        self.Wait(
+            "body > div.main-wrapper > div.content-wrapper.ng-scope.dashboard > div > div > div > div.gridster-content > ul > li:nth-child(6) > div.box.large > div.box-content > div > div.mediumContent.ng-scope.extendHeight > div.trafficMonitorFlotContainer > flot > div > canvas.flot-overlay")
+        self.Click(
+            "body > div.main-wrapper > div.content-wrapper.ng-scope.dashboard > div > div > div > div.gridster-content > ul > li:nth-child(6) > div.box.large > div.box-content > div > div.mediumContent.ng-scope.extendHeight > div.trafficMonitorFlotContainer > flot > div > canvas.flot-overlay",
+            "CSS")
+
+    ################################################################
+    # _________Web_Configuration_______________
+
+    @prefix_decorator
+    def Config_Syslog_DP(self, fill):
+        self.Click("gwt-debug-DevicesTree_Node_" + elf.DP_Names[0])
+        self.Click("gwt-debug-TopicsNode_dp.setup.ReportingSettings-content")
+        self.Click("gwt-debug-TopicsNode_dp.setup.tree.syslogdp")
+        self.Click("gwt-debug-lockbutton")
+        self.Click("gwt-debug-rdwrSyslogServerTable_NEW")
+        self.Fill("gwt-debug-rdwrSyslogServerAddress_Widget", fill)
+        self.Click("gwt-debug-ConfigTab_NEW_rdwrSyslogServerTable_Submit")
+        self.Click("gwt-debug-rdwrSyslogServerTable_RowID_0")
+        self.Click("gwt-debug-rdwrSyslogServerTable_DELETE")
+        self.Click("gwt-debug-Dialog_Box_Yes")
+        self.Click("gwt-debug-lockbutton")
+
+    @prefix_decorator
+    def Config_Syslog_DF(self, fill):
+        self.DF_Configuration()
+        self.Click("gwt-debug-Configuration")
+        self.Click("gwt-debug-TopicsNode_Configuration.System.SyslogAlerts-content")
+        self.Click("gwt-debug-SyslogAlerts_NEW")
+        self.Fill("gwt-debug-ip_Widget", fill)
+        self.Click("gwt-debug-ConfigTab_NEW_SyslogAlerts_Submit")
+        self.Click("gwt-debug-SyslogAlerts_RowID_0")
+        self.Click("gwt-debug-SyslogAlerts_DELETE")
+        self.Click("gwt-debug-Dialog_Box_Yes")
+
+    ################################################################
+    # _________Custom_______________
+
+    def Screenshots(self, Name="", MSSP=True):
+        if Name:
+            self.Name = Name
+        self.DF_Current_Attack_Table()
+        self.DF_Ongoing_Protections()
+        self.DF_Protected_Objects()
+        self.DF_Attack_Mitigation_Operation()
+        self.DF_Traffic_Utillization()
+        self.DP_Monitoring()
+        self.DF_Analytics()
+        self.DP_Screenshots()
+        if MSSP:
+            self.MSSP_Dashboard_Screenshot()
+
+
+class BP(object):
+    __slots__ = ("__dict__", "bps")
+
+    def __init__(self, AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
+                 Session_MAX=DTCT["BP_Session_Max_Number"] + 1, Test_Name=DTCT["BP_Test"]):
+        self.bps = BPS((DTCT["BP_IP"]), (DTCT["BP_Username"]), (DTCT["BP_Password"]))
+        # login
+        self.bps.login()
+        # showing current port reservation state
+        self.bps.portsState()
+        # reserving the ports.
+        self.bps.reservePorts(slot=DTCT["BP_Reserve_Slot"],
+                              portList=[DTCT["BP_Reserve_Port_1"], DTCT["BP_Reserve_Port_2"]],
+                              group=1, force=True)
+        # running the canned test 'AppSim' using group 1
+        # please note the runid generated. It will be used for many more functionalities
+        self.bps.setNormalTest(NN_name=Test_Name)
+        self.bps.viewNormalTest()
+        NORUN = []
+        append = NORUN.append
+        for i in range(1, Appsim_MAX):
+            if i not in AppSim:
+                append(i)
+        for i in NORUN:
+            self.bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='false')
+        for i in AppSim:
+            self.bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='true')
+        NORUN = []
+        append = NORUN.append
+        for i in range(1, Session_MAX):
+            if i not in Session:
+                append(i)
+        for i in NORUN:
+            self.bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='false')
+        for i in Session:
+            self.bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='true')
+        self.bps.saveNormalTest(name_=Test_Name, force='True')
+        self.TestNum = self.bps.runTest(modelname=Test_Name, group=1)
+
+    # Stopping BP
+    def Stop(self, csv=False):
+        try:
+            # stopping test
+            self.bps.stopTest(testid=self.TestNum)
+            # logging out
+            if csv:
+                self.bps.exportTestReport(self.TestNum, "Test_Report.csv", "Test_Report")
+        except:
+            print(getframeinfo(currentframe()).lineno, "stop error")
+        finally:
+            self.bps.logout()
+
+
+class SSH(object):
+    __slots__ = ("__dict__", "IP", "USER", "PASSWORD", "ssh")
+
+    def __init__(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+        self.IP = IP
+        self.USER = USER
+        self.PASSWORD = PASSWORD
+        self.ssh_connect(IP, USER, PASSWORD)
+
+    def ssh_connect(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+        try:
+            self.ssh = paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            flag = True
+            while flag:
+                try:
+                    self.ssh.connect(IP, port=22, username=USER, password=PASSWORD)
+                    flag = False
+                except:
+                    pass
+        except:
+            print(getframeinfo(currentframe()).lineno, "ssh_connect failed")
+
+    def command(self, COM, Close=False):
+        try:
+            stdin, stdout, stderr = self.ssh.exec_command(COM)
+            if Close:
+                self.Close()
+            return stdout.readlines()
+        except:
+            self.ssh_connect(self.IP, self.USER, self.PASSWORD)
+            self.command(COM)
+
+    @staticmethod
+    def PeakFlow():
+        try:
+            ssh = SSH()
+            ssh.command("python3 Attack_start.py")
+            ssh.Close()
+        except:
+            ssh.Close()
+            SSH.PeakFlow()
+
+    @staticmethod
+    def Reboot(DF=True, Vision=True):
+        if DF:
+            try:
+                ssh = SSH(Vision_API.DF_IP()[0], "root", "radware")
+                ssh.command("sudo reboot", True)
+            except:
+                ssh.Close()
+        if Vision:
+            try:
+                ssh = SSH(DTCT["Vision_IP"], "root", "radware")
+                ssh.command("sudo reboot", True)
+            except:
+                ssh.Close()
+
+    def Close(self):
+        flag = True
+        while flag:
+            try:
+                self.ssh.close()
+                flag = False
+            except:
+                pass
+
+
+class Telnet(object):
+    def __init__(self, HOST=list(DTCT.DP_Info.values())[0], user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
+        self.tn = telnetlib.Telnet()
+        self.tn.open(HOST)
+        self.tn.read_until(b"User:")
+        self.tn.write(user.encode('ascii') + b"\n")
+        self.tn.read_until(b"Password:")
+        self.tn.write(password.encode('ascii') + b"\n")
+        debug_print = self.tn.read_until(b"#", 60).decode('utf-8')
+        if debug_prints_flag:
+            print(getframeinfo(currentframe()).lineno, debug_print)
+
+    def Command(self, command, close=False):
+        self.tn.write(command.encode('ascii') + b"\n")
+        output = self.tn.read_until(b"#", 30).decode('utf-8')
+        if close:
+            self.tn.close()
+        return output
+
+    def DP_Syslog_ADD(self, ip=DTCT["Syslog_IP"]):
+        command = "manage syslog destination add " + ip
+        self.tn.write(command.encode('ascii') + b"\n")
+        print(getframeinfo(currentframe()).lineno, self.tn.read_until(b"#", 30).decode('utf-8'))
+
+    def DP_Syslog_DELETE(self, ip=DTCT["Syslog_IP"]):
+        command = "manage syslog destination del " + ip
+        self.tn.write(command.encode('ascii') + b"\n")
+        print(getframeinfo(currentframe()).lineno, self.tn.read_until(b"#", 30).decode('utf-8'))
+
+    @staticmethod
+    def DP_Check_Port_Error(Legit_Only=False):
+        for i in DTCT.DP_Info.values():
+            flag = False
+            telnet = Telnet(i)
+            c = telnet.Command("system inf-stats")
+            for j in DTCT["DP_Ports"]:
+                if (not re.search(rf"{j}\s+[0-9]+\s+0\s+0\s+[0-9]+\s+0\s+0", c, re.IGNORECASE)) and re.search(
+                        rf"^{j}\s+", c, re.IGNORECASE):
+                    print(getframeinfo(currentframe()).lineno, "Port Error:")
+                    print(getframeinfo(currentframe()).lineno, c)
+                    break
+            else:
+                if Legit_Only:
+                    c = telnet.Command("system internal dpe-statistics total all", True)
+                    if (not re.search(rf"DPE Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", c,
+                                      re.IGNORECASE)) and (
+                    not re.search(rf"HW-Accelerator Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", c,
+                                  re.IGNORECASE)) and (
+                    not re.search(rf"Total Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", c, re.IGNORECASE)):
+                        print(getframeinfo(currentframe()).lineno, "dpe-statistics Error:")
+                        print(getframeinfo(currentframe()).lineno, c)
+                        break
+
+        else:
+            flag = not flag
+        return flag
+
+    def Close(self):
+        self.tn.close()
+
+
+class Vision_API(object):
+    Vision = DTCT["Vision_IP"]
+    flag = False
+
+    def __init__(self, Vision=DTCT["Vision_IP"]):
+        self.Vision = Vision
+        url = f"https://{self.Vision}/mgmt/system/user/login"
+        fill_json = {"username": DTCT["Vision_Username"], "password": DTCT["Vision_Password"]}
+        response = requests.post(url, verify=False, data=None, json=fill_json)
+        # self.flag = response.status_code
+        self.cookie = response.cookies
+        if "jsessionid" not in response.text:
+            self.flag = False
+        else:
+            self.flag = True
+            if debug_prints_flag:
+                print(getframeinfo(currentframe()).lineno, response.text)
+
+    def Syslog_ADD(self, IP=DTCT["Syslog_IP"], Level="DEBUG"):
+        url = f"https://{self.Vision}/mgmt/device/df/config/SyslogAlerts/add"
+        json = {
+            "ip": IP,
+            "port": "514",
+            "severity": Level,
+            "description": ""
+        }
+        response = requests.post(url, verify=False, data=None, json=json, cookies=self.cookie)
+        if debug_prints_flag:
+            print(getframeinfo(currentframe()).lineno, response.text)
+
+    def Syslog_DELETE(self, IP=DTCT["Syslog_IP"]):
+        url = f"https://{self.Vision}/mgmt/device/df/config/SyslogAlerts/{IP}"
+        response = requests.delete(url, verify=False, data=None, cookies=self.cookie)
+        if debug_prints_flag:
+            print(getframeinfo(currentframe()).lineno, response.text)
+
+    def Get(self, url, Logout=False):
+        response = requests.get(url, verify=False, data=None, cookies=self.cookie)
+        if Logout:
+            self.Logout()
+        return response.json()
+
+    @staticmethod
+    def DF_IP():
+        api = Vision_API()
+        output = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED", True)
+        return [output['LOCAL_NODE_IP'],output["STANDBY_IP"]]
+
+    @staticmethod
+    def HTTP_Check(TIME=8):
+        try:
+            while not ping(DTCT['Vision_IP']):
+                pass
+            api = Vision_API()
+            api.Logout()
+            time.sleep(5)
+            while not api.flag:
+                api = Vision_API()
+                api.Logout()
+                time.sleep(5)
+        except:
+            time.sleep(5)
+            Vision_API.HTTP_Check()
+        time.sleep(TIME * 60)
+
+    def Logout(self):
+        url = f"https://{self.Vision}/mgmt/system/user/logout"
+        response = requests.post(url, verify=False, cookies=self.cookie)
+        # self.flag = response.status_code
+        if self.flag:
+            if debug_prints_flag:
+                print(getframeinfo(currentframe()).lineno, response.text)
+
+
+class SyslogUDPHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        data = bytes.decode(self.request[0].strip())
+        socket = self.request[1]
+        self.data = str(data)
+        self.match()
+        # print(getframeinfo(currentframe()).lineno,"%s : " % self.client_address[0], self.data)
+        logging.info(self.data)
+
+    def match(self):
+        if "ERROR" in self.data:
+            Syslog.error.add(self.data)
+            return
+        elif "attack started" in self.data:
+            matches = re.compile(
+                r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(
+                self.data)
+            for match in matches:
+                Syslog.start.add(match.group(0))
+            # Syslog.start += 1
+            return
+        elif "attack ended" in self.data:
+            matches = re.compile(
+                r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(self.data)
+            for match in matches:
+                Syslog.end.add(match.group(0))
+            # Syslog.end += 1
+            return
+        elif "Imported successfully" in self.data:
+            Syslog.Import += 1
+        elif " term " in self.data:
+            Syslog.dp_term += 1
+
+
+class Syslog(object):
+    start = set()
+    end = set()
+    error = set()
+    Import = 0
+    dp_term = 0
+
+    def __init__(self):
+        self.telnet = Telnet()
+        self.telnet.DP_Syslog_ADD()
+        self.API = Vision_API()
+        self.API.Syslog_ADD()
+
+    def __call__(self, HOST=DTCT["Syslog_IP"]):
+
+        try:
+            try:
+                os.remove("syslog_AMS.log")
+            except:
+                print(getframeinfo(currentframe()).lineno, "NO Syslog file to delete ")
+            logging.basicConfig(level=logging.INFO, format='%(message)s', datefmt='', filename=DTCT["LOG_FILE"],
+                                filemode='a')
+            self.server = socketserver.UDPServer((HOST, 514), SyslogUDPHandler)
+            self.server.serve_forever(poll_interval=0.5)
+        except (IOError, SystemExit):
+            raise
+        except KeyboardInterrupt:
+            print(getframeinfo(currentframe()).lineno, "Crtl+C Pressed. Shutting down.")
+
+    def DELETE(self):
+        try:
+            self.telnet.DP_Syslog_DELETE()
+        except:
+            self.telnet = Telnet()
+            self.telnet.DP_Syslog_DELETE()
+        self.API.Syslog_DELETE()
+        self.API.Logout()
+        try:
+            self.server.shutdown()
+        except:
+            pass
+        print(getframeinfo(currentframe()).lineno, self.start)
+        print(getframeinfo(currentframe()).lineno, self.end)
