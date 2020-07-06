@@ -2,7 +2,7 @@
 
 import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys
 from inspect import currentframe, getframeinfo
-from . import Check
+from . import AMS
 
 try:
     from selenium import webdriver
