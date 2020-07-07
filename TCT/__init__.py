@@ -2,7 +2,6 @@
 
 import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys
 from inspect import currentframe, getframeinfo
-from . import AMS
 
 try:
     from selenium import webdriver
@@ -47,66 +46,7 @@ except:
 cwd = os.getcwd()
 debug_prints_flag = False
 DP_index = "0"
-
-
-class Configuration(object):
-    def __init__(self, json_file):
-        self.path = os.getcwd()
-        self.DP_Info = dict()
-        self.json_file = json_file
-        with open(json_file, "r") as read_file:
-            self.json = json.load(read_file)
-        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
-        fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
-        response = requests.post(url, verify=False, data=None, json=fill_json)
-        # self.flag = response.status_code
-        cookie = response.cookies
-        url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices"
-        api = requests.get(url, verify=False, data=None, cookies=cookie).json()
-        try:
-            for i in api["MitigationDevices"]:
-                if i["type"] == "DefensePro":
-                    self.DP_Info[i["dp_name"]] = i["address"]
-        except:
-            print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
-        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
-        requests.post(url, verify=False, cookies=cookie)
-
-    def __setitem__(self, key, value):
-        self.json[key] = value
-
-    def __getitem__(self, item):
-        return self.json[item]
-
-    def save(self):
-        os.chdir(self.path)
-        with open(self.json_file, 'w') as outfile:
-            json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
-        os.chdir(cwd)
-
-
-try:
-    os.chdir('..')
-    DTCT = Configuration("Data_For_TCT.json")
-    os.chdir(cwd)
-except:
-    try:
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
-        DTCT = Configuration("Data_For_TCT.json")
-        os.chdir(cwd)
-    except:
-        try:
-            os.chdir(cwd)
-            path = pathlib.Path().absolute()
-            DTCT_Path = ""
-            for r, d, f in os.walk(path):
-                if "Data_For_TCT.json" in f:
-                    DTCT_Path = os.path.join(r, "Data_For_TCT.json")
-                    break
-            DTCT = Configuration(DTCT_Path)
-        except:
-            print(getframeinfo(currentframe()).lineno, "Configure the json and then work with the package")
-            exit()
+frame_size = 77
 
 
 def ping(host):
@@ -123,6 +63,12 @@ def ping(host):
 
     return subprocess.call(command) == 0
 
+def frame_decorator(func):
+    def wrapper(*args, **kwargs):
+        print("# " *frame_size)
+        func(*args, **kwargs)
+        print("# " *frame_size)
+    return wrapper
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
@@ -985,12 +931,13 @@ class SSH(object):
     def command(self, COM, Close=False):
         try:
             stdin, stdout, stderr = self.ssh.exec_command(COM)
-            if Close:
-                self.Close()
             return stdout.readlines()
         except:
             self.ssh_connect(self.IP, self.USER, self.PASSWORD)
             self.command(COM)
+        finally:
+            if Close:
+                self.Close()
 
     @staticmethod
     def PeakFlow():
@@ -1089,7 +1036,6 @@ class Telnet(object):
 
 
 class Vision_API(object):
-    Vision = DTCT["Vision_IP"]
     flag = False
 
     def __init__(self, Vision=DTCT["Vision_IP"]):
@@ -1239,3 +1185,173 @@ class Syslog(object):
             pass
         print(getframeinfo(currentframe()).lineno, self.start)
         print(getframeinfo(currentframe()).lineno, self.end)
+
+
+class Check(object):
+    class DP(object):
+
+        @staticmethod
+        @frame_decorator
+        def Port_Error(Legit_Only=False):
+            flag = False  # output flag
+            try:
+                for i in DTCT.DP_Info.values():  # For all DPs that the DF is in contact with
+                    telnet = Telnet(i)
+                    com = telnet.Command("system inf-stats")
+
+                    for j in DTCT["DP_Ports"]:  # For the ports the configured at Data_For_TCT.json
+                        if (not re.search(rf"{j}\s+[0-9]+\s+0\s+0\s+[0-9]+\s+0\s+0", com, re.IGNORECASE)) and re.search(
+                                rf"^{j}\s+", com, re.IGNORECASE):
+                            print(f"{getframeinfo(currentframe()).lineno} Port Error:".center(frame_size, "#"))
+                            print(getframeinfo(currentframe()).lineno, com)
+                            break
+
+                    else:
+                        if Legit_Only:
+                            com = telnet.Command("system internal dpe-statistics total all", True)
+                            if (not re.search(rf"DPE Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", com,
+                                              re.IGNORECASE)) and (
+                                    not re.search(
+                                        rf"HW-Accelerator Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", com,
+                                        re.IGNORECASE)) and (
+                                    not re.search(rf"Total Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", com,
+                                                  re.IGNORECASE)):
+                                print(
+                                    f"{getframeinfo(currentframe()).lineno} dpe-statistics Error:".center(frame_size, '#'))
+                                print(getframeinfo(currentframe()).lineno, com)
+                                break
+                else:
+                    flag = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
+
+        @staticmethod
+        @frame_decorator
+        def No_BDOS_Attack():
+            flag = False
+            try:
+                for i in list(DTCT.DP_Info.values()):
+                    telnet = Telnet(i)
+                    com = telnet.Command("system internal security bdos attacks", True).split("\n")
+                    if len(com) > 4:
+                        print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:".center(frame_size, "#"))
+                        print(getframeinfo(currentframe()).lineno, com)
+                        break
+                else:
+                    flag = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
+
+    class DF(object):
+        @staticmethod
+        @frame_decorator
+        def BGP_Announcements(setup = "",):
+
+            Value = Sys.API.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/Announcements")
+            response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole', auth=('admin', 'radware'))
+            assert len(Value["Announcements"]) == 100 * len(response.json()["values"]) + DTCT[
+                "OngoingProtections"] * 100
+
+    class Vision(object):
+        pass
+
+    class FD(object):
+        @staticmethod
+        @frame_decorator
+        def No_Detection():
+            flag = False
+            try:
+                response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
+                                        auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
+                if  len(response.json()["values"]) == 0:
+                    flag = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
+
+    class BSN(object):
+        pass
+
+    class Other(object):
+        @staticmethod
+        def Ping_All_Components(HA_DF=False, Fail_Time=15):
+            start = time.perf_counter()
+            flag = True
+            if HA_DF:
+                Components_List = Vision_API.DF_IP()
+            else:
+                Components_List = [Vision_API.DF_IP()[0]]
+            Components_List += [i for i in DTCT.DP_Info.values()]
+            Components_List.append(DTCT["Vision_IP"])
+            while (time.perf_counter() - start < (Fail_Time * 60)):
+                for i in Components_List:
+                    flag = flag and ping(i)
+                if flag:
+                    break
+                print("#" * frame_size)
+                time.sleep(1)
+            return flag
+
+
+class Configuration(object):
+    def __init__(self, json_file):
+        self.path = os.getcwd()
+        self.DP_Info = dict()
+        self.json_file = json_file
+        with open(json_file, "r") as read_file:
+            self.json = json.load(read_file)
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
+        fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
+        response = requests.post(url, verify=False, data=None, json=fill_json)
+        # self.flag = response.status_code
+        cookie = response.cookies
+        url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices"
+        api = requests.get(url, verify=False, data=None, cookies=cookie).json()
+        try:
+            for i in api["MitigationDevices"]:
+                if i["type"] == "DefensePro":
+                    self.DP_Info[i["dp_name"]] = i["address"]
+        except:
+            print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
+        requests.post(url, verify=False, cookies=cookie)
+
+    def __setitem__(self, key, value):
+        self.json[key] = value
+
+    def __getitem__(self, item):
+        return self.json[item]
+
+    def save(self):
+        os.chdir(self.path)
+        with open(self.json_file, 'w') as outfile:
+            json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
+        os.chdir(cwd)
+
+
+try:
+    os.chdir('..')
+    DTCT = Configuration("Data_For_TCT.json")
+    os.chdir(cwd)
+except:
+    try:
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        DTCT = Configuration("Data_For_TCT.json")
+        os.chdir(cwd)
+    except:
+        try:
+            os.chdir(cwd)
+            path = pathlib.Path().absolute()
+            DTCT_Path = ""
+            for r, d, f in os.walk(path):
+                if "Data_For_TCT.json" in f:
+                    DTCT_Path = os.path.join(r, "Data_For_TCT.json")
+                    break
+            DTCT = Configuration(DTCT_Path)
+        except:
+            print(getframeinfo(currentframe()).lineno, "Configure the json and then work with the package")
