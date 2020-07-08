@@ -76,7 +76,7 @@ class Configuration(object):
             #DF_Info and DF_HA status
             url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED"
             response = requests.get(url, verify=False, data=None, cookies=cookie).json()
-            self.DF_HA = response["HA_ENABLED"]
+            self.DF_HA = bool(response["STANDBY_IP"])
             for i in [response['LOCAL_NODE_IP'], response["STANDBY_IP"]]:
                 if i:
                     ssh = paramiko.SSHClient()
@@ -87,7 +87,7 @@ class Configuration(object):
                             self.ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
                             flag = False
                         except:
-                            pass
+                            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
                     stdin, stdout, stderr = self.ssh.exec_command("ifconfig")
                     string = "".join(stdout.readlines())
                     match = re.search(r'G2.*', "".join(string), re.DOTALL)
