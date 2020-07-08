@@ -16,12 +16,7 @@ try:
 except:
     with open("Data_For_TCT.json", "a") as read_file:
         TCT_json={
-    "Attack_Number": 10,
     "BP_AppSim_Max_Number": 8,
-    "BP_AppSim_legit": [
-        1,
-        2
-    ],
     "BP_IP": "1.1.1.1",
     "BP_Password": "Password",
     "BP_Reserve_Port_1": 0,
@@ -30,7 +25,6 @@ except:
     "BP_Session_Max_Number": 8,
     "BP_Test": "Test_Name",
     "BP_Username": "Username",
-    "DF_IP_Secondary": "1.1.1.1",
     "DF_Password": "Password",
     "DF_Username": "Username",
     "DP_Password": "Password",
@@ -45,16 +39,16 @@ except:
     "MSSP_Dash_URL": "https://1.1.1.1/dashboard#/dashboard?r=5e579021d29d2001cc0593b8",
     "MSSP_Password": "Password",
     "MSSP_Username": "Username",
-    "OngoingProtections": 1,
-    "PO_Attack_Number": 1,
     "SSH_IP": "1.1.1.1",
     "SSH_Password": "Password",
     "SSH_Username": "Username",
     "Syslog_IP": "1.1.1.1",
-    "Test_OngoingProtections": 1,
+    "Syslog_Start": [],
+    "Syslog_End": [],
     "Vision_IP": "1.1.1.1",
     "Vision_Password": "Password",
-    "Vision_Username": "Username"
+    "Vision_Username": "Username",
+    "OngoingProtections": 0
 }
         json.dump(TCT_json, read_file, ensure_ascii=False, indent=4, sort_keys=True)
         DTCT1 = TCT_json

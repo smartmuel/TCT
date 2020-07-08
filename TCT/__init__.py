@@ -88,6 +88,7 @@ class Configuration(object):
         fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
         response = requests.post(url, verify=False, data=None, json=fill_json)
         cookie = response.cookies
+
         url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED"
         response = requests.get(url, verify=False, data=None, cookies=cookie).json()
         self.DF_HA = bool(response["STANDBY_IP"])
@@ -98,7 +99,7 @@ class Configuration(object):
                 flag = True
                 while flag:
                     try:
-                        ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
+                        ssh.connect(i, port=22, username=self.json["DF_Username"], password=self.json["DF_Password"])
                         flag = False
                     except:
                         print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
@@ -113,6 +114,8 @@ class Configuration(object):
 
     def save(self):
         os.chdir(self.path)
+        self.json["Syslog_Start"] = list(Syslog.start)
+        self.json["Syslog_End"] = list(Syslog.end)
         with open(self.json_file, 'w') as outfile:
             json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
         os.chdir(cwd)
@@ -196,7 +199,7 @@ def prefix_decorator(prefix=""):
 
 
 class Driver(object):
-    __slots__ = ("__dict__", "driver", "Name", "url", "Driver_Path")
+    __slots__ = ("__dict__", "driver", "Name", "url")
     try:
         os.mkdir("ScreenShots")
     except FileExistsError:
@@ -206,7 +209,6 @@ class Driver(object):
 
     def __init__(self, Name="Test", url=""):
         self.start = time.perf_counter()
-        self.Driver_Path = DTCT["Driver_Path"]
 
         # Opening Chrome Driver
         options = Options()
@@ -217,14 +219,12 @@ class Driver(object):
             "safebrowsing.enabled": True
         })
         options.add_argument('--ignore-certificate-errors')
-        # option = webdriver.ChromeOptions()
-        # option.add_argument('--ignore-certificate-errors')
         try:
             chromedriver_autoinstaller.install()
             self.driver = webdriver.Chrome(chrome_options=chrome_options)
         except:
             try:
-                self.driver = webdriver.Chrome(self.Driver_Path, options=options)
+                self.driver = webdriver.Chrome(DTCT["Driver_Path"], options=options)
             except:
                 # finding chromedriver location
                 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -232,14 +232,14 @@ class Driver(object):
                 path = pathlib.Path().absolute()
                 for r, d, f in os.walk(path):
                     if "chromedriver.exe" in f:
-                        self.Driver_Path = os.path.join(r, "chromedriver.exe")
-                        DTCT["Driver_Path"] = self.Driver_Path
-                        self.driver = webdriver.Chrome(self.Driver_Path, chrome_options=options)
+                        DTCT["Driver_Path"] = os.path.join(r, "chromedriver.exe")
+                        self.driver = webdriver.Chrome(DTCT["Driver_Path"], chrome_options=options)
                         break
                 else:
                     print(getframeinfo(currentframe()).lineno, "You need to have chromedriver to open chrome.")
                     exit()
-                os.chdir(cwd)
+        finally:
+            os.chdir(cwd)
 
         self.Name = Name
         self.Main_Name = Name.split("_")[0]
@@ -1057,11 +1057,6 @@ class SSH(object):
             try:
                 ssh = SSH(Vision_API.DF_IP()[0], "root", "radware")
                 ssh.command("sudo reboot", True)
-                time.sleep(3)
-                while not ping(list(DTCT.DP_Info.keys())[0]):
-                    time.sleep(0.5)
-                    pass
-                DTCT.DF_Info_Update()
             except:
                 ssh.Close()
         if Vision:
@@ -1230,22 +1225,17 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
     def match(self):
         if "ERROR" in self.data:
             Syslog.error.add(self.data)
-            return
         elif "attack started" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(
                 self.data)
             for match in matches:
                 Syslog.start.add(match.group(0))
-            # Syslog.start += 1
-            return
         elif "attack ended" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(self.data)
             for match in matches:
                 Syslog.end.add(match.group(0))
-            # Syslog.end += 1
-            return
         elif "Imported successfully" in self.data:
             Syslog.Import += 1
         elif " term " in self.data:
@@ -1377,18 +1367,23 @@ class Check(object):
 
         @staticmethod
         @frame_decorator
-        def BGP_Announcements(check=False):
+        def BGP_Announcements():
             flag = False
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
             response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements',True)
-            #if len(response1["BgpPeers"])*len(DTCT.DF_Info) <= len()
-            #for i in response2["Announcements"]:
-
-        @staticmethod
-        @frame_decorator
-        def BGP_Peers():
-            pass
+            if len(response1["BgpPeers"]) * (len(Syslog.start) + DTCT["OngoingProtections"])  <= len(response2["Announcements"]):
+                """peers = dict()
+                for i in response1["BgpPeers"]:
+                    try:
+                        if i["state"] == "ESTABLISHED":
+                            peers[i["localIp"]].add(i["ip"])
+                    except KeyError:
+                        peers[i["localIp"]] = (i["ip"])
+                for i in response2["Announcements"]:
+                    if i["status"] == "SUCCESS":"""
+                flag = True
+            return flag
 
     class Vision(object):
         pass
@@ -1413,20 +1408,24 @@ class Check(object):
 
     class Other(object):
         @staticmethod
-        def Ping_All_Components(HA_DF=False, Fail_Time=15):
+        def Ping_All_Components(Fail_Time=15):
             start = time.perf_counter()
             flag = True
-            if HA_DF:
-                Components_List = Vision_API.DF_IP()
-            else:
-                Components_List = [Vision_API.DF_IP()[0]]
-            Components_List += [i for i in DTCT.DP_Info.values()]
-            Components_List.append(DTCT["Vision_IP"])
-            while (time.perf_counter() - start < (Fail_Time * 60)):
-                for i in Components_List:
-                    flag = flag and ping(i)
-                if flag:
-                    break
-                print("#" * frame_size)
-                time.sleep(1)
-            return flag
+            try:
+                if DTCT.DF_HA:
+                    Components_List = Vision_API.DF_IP()
+                else:
+                    Components_List = [Vision_API.DF_IP()[0]]
+                Components_List += [i for i in DTCT.DP_Info.values()]
+                Components_List.append(DTCT["Vision_IP"])
+                while (time.perf_counter() - start < (Fail_Time * 60)):
+                    for i in Components_List:
+                        flag = flag and ping(i)
+                    if flag:
+                        break
+                    print("#" * frame_size)
+                    time.sleep(1)
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
