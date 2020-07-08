@@ -14,7 +14,7 @@ try:
     from selenium.webdriver.chrome.options import Options
 except:
     print(getframeinfo(currentframe()).lineno, "Selenium library is missing")  # fix - add flag
-    pass
+    #pass
 try:
     import requests
     # pass
@@ -54,29 +54,56 @@ class Configuration(object):
         self.path = os.getcwd()
         self.DP_Info = dict()
         self.DF_Info = dict()
+        self.DF_HA = False
         self.json_file = json_file
-        with open(json_file, "r") as read_file:
-            self.json = json.load(read_file)
-
-    def __call__(self, *args, **kwargs):
         try:
-            api = Vision_API()
-            com = api.Get(f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices")
-            # Making Dictionary thet contain keys of DP names and valiuse of their IP
+            with open(json_file, "r") as read_file:
+                self.json = json.load(read_file)
+
+            #DP_Info
+            url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
+            fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
+            response = requests.post(url, verify=False, data=None, json=fill_json)
+            cookie = response.cookies
+            url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices"
+            response = requests.get(url, verify=False, data=None, cookies=cookie).json()
             try:
-                for i in com["MitigationDevices"]:
+                for i in response["MitigationDevices"]:
                     if i["type"] == "DefensePro":
                         self.DP_Info[i["dp_name"]] = i["address"]
             except:
                 print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
-            com = api.Get(f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED", True)
-            # Making Dictionary thet contain keys Mangement IP and valiuse of DATA IP
-            for i in [com['LOCAL_NODE_IP'], com["STANDBY_IP"]]:
-                ssh = SSH(i)
-                string = ssh.command("ifconfig", True)
-                match = re.search(r'G2.*', "".join(string), re.DOTALL)
-                match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
-                self.DF_Info[i] = match.group(0)
+
+            #DF_Info and DF_HA status
+            url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED"
+            response = requests.get(url, verify=False, data=None, cookies=cookie).json()
+            self.DF_HA = response["HA_ENABLED"]
+            for i in [response['LOCAL_NODE_IP'], response["STANDBY_IP"]]:
+                if i:
+                    ssh = paramiko.SSHClient()
+                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    flag = True
+                    while flag:
+                        try:
+                            self.ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
+                            flag = False
+                        except:
+                            pass
+                    flag = True
+                    while flag:
+                        try:
+                            stdin, stdout, stderr = self.ssh.exec_command("ifconfig")
+                            flag = False
+                        except:
+                            pass
+                    string = "".join(stdout.readlines())
+                    match = re.search(r'G2.*', "".join(string), re.DOTALL)
+                    match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
+                    self.DF_Info[i] = match.group(0)
+
+            url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
+            requests.post(url, verify=False, cookies=cookie)
+
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
 
@@ -982,9 +1009,14 @@ class SSH(object):
         self.IP = IP
         self.USER = USER
         self.PASSWORD = PASSWORD
-        self.ssh_connect(IP, USER, PASSWORD)
+        self.NOT_IP = True
+        if re.search(r'[0-2]?[0-9]?[0-9]?\.[0-2]?[0-9]?[0-9]?\.[0-2]?[0-9]?[0-9]?\.[0-2]?[0-9]?[0-9]?', IP):
+            self.NOT_IP = False
+            self.ssh_connect(IP, USER, PASSWORD)
 
     def ssh_connect(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+        if self.NOT_IP:
+            return None
         try:
             self.ssh = paramiko.SSHClient()
             self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -999,6 +1031,8 @@ class SSH(object):
             print(getframeinfo(currentframe()).lineno, "ssh_connect failed")
 
     def command(self, COM, Close=False):
+        if self.NOT_IP:
+            return None
         try:
             stdin, stdout, stderr = self.ssh.exec_command(COM)
             return stdout.readlines()
@@ -1035,6 +1069,8 @@ class SSH(object):
                 ssh.Close()
 
     def Close(self):
+        if self.NOT_IP:
+            return None
         flag = True
         while flag:
             try:
@@ -1323,15 +1359,18 @@ class Check(object):
         @frame_decorator
         def BGP_Established():
             flag = False
-            api = Vision_API()
-            response = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
-            for i in response1["BgpPeers"]:
-                if i["state"] != "ESTABLISHED":
-                    break
-                try:
-                    DTCT["BGP_Established"] += 1
-            else:
-                flag = True
+            try:
+                api = Vision_API()
+                response = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
+                for i in response1["BgpPeers"]:
+                    if i["state"] != "ESTABLISHED":
+                        break
+                else:
+                    flag = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
 
         @staticmethod
         @frame_decorator
@@ -1339,23 +1378,13 @@ class Check(object):
             flag = False
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
-            if not len(Check.peers) or check:
-                for i in response1["BgpPeers"]:
-                    if i["state"] != "ESTABLISHED":
-                        continue
-                    else:
-                        Check.peers.add(i["ip"])
             response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements',True)
             if len(response1["BgpPeers"])*len(DTCT.DF_Info) <= len()
             for i in response2["Announcements"]:
 
-
-
-
         @staticmethod
         @frame_decorator
         def BGP_Peers():
-
 
     class Vision(object):
         pass
@@ -1397,5 +1426,3 @@ class Check(object):
                 print("#" * frame_size)
                 time.sleep(1)
             return flag
-
-DTCT()
