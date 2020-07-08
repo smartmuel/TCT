@@ -84,7 +84,7 @@ class Configuration(object):
                     flag = True
                     while flag:
                         try:
-                            self.ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
+                            ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
                             flag = False
                         except:
                             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
