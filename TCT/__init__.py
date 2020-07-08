@@ -1379,12 +1379,13 @@ class Check(object):
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
             response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements',True)
-            if len(response1["BgpPeers"])*len(DTCT.DF_Info) <= len()
-            for i in response2["Announcements"]:
+            #if len(response1["BgpPeers"])*len(DTCT.DF_Info) <= len()
+            #for i in response2["Announcements"]:
 
         @staticmethod
         @frame_decorator
         def BGP_Peers():
+            pass
 
     class Vision(object):
         pass
