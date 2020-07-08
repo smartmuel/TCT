@@ -72,30 +72,7 @@ class Configuration(object):
                         self.DP_Info[i["dp_name"]] = i["address"]
             except:
                 print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
-
-            #DF_Info and DF_HA status
-            url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED"
-            response = requests.get(url, verify=False, data=None, cookies=cookie).json()
-            self.DF_HA = bool(response["STANDBY_IP"])
-            for i in [response['LOCAL_NODE_IP'], response["STANDBY_IP"]]:
-                if i:
-                    ssh = paramiko.SSHClient()
-                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    flag = True
-                    while flag:
-                        try:
-                            ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
-                            flag = False
-                        except:
-                            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-                    stdin, stdout, stderr = ssh.exec_command("ifconfig")
-                    string = "".join(stdout.readlines())
-                    match = re.search(r'G2.*', "".join(string), re.DOTALL)
-                    match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
-                    self.DF_Info[i] = match.group(0)
-
-            url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
-            requests.post(url, verify=False, cookies=cookie)
+            self.DF_Info_Update()
 
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
@@ -105,6 +82,34 @@ class Configuration(object):
 
     def __getitem__(self, item):
         return self.json[item]
+
+    def DF_Info_Update(self):
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
+        fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
+        response = requests.post(url, verify=False, data=None, json=fill_json)
+        cookie = response.cookies
+        url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config?prop=HA_ENABLED"
+        response = requests.get(url, verify=False, data=None, cookies=cookie).json()
+        self.DF_HA = bool(response["STANDBY_IP"])
+        for i in [response['LOCAL_NODE_IP'], response["STANDBY_IP"]]:
+            if i:
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                flag = True
+                while flag:
+                    try:
+                        ssh.connect(i, port=22, username=self.json["SSH_Username"], password=self.json["SSH_Password"])
+                        flag = False
+                    except:
+                        print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                stdin, stdout, stderr = ssh.exec_command("ifconfig")
+                string = "".join(stdout.readlines())
+                match = re.search(r'G2.*', "".join(string), re.DOTALL)
+                match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
+                self.DF_Info[i] = match.group(0)
+
+        url = f"https://{self.json['Vision_IP']}/mgmt/system/user/logout"
+        requests.post(url, verify=False, cookies=cookie)
 
     def save(self):
         os.chdir(self.path)
@@ -1052,6 +1057,11 @@ class SSH(object):
             try:
                 ssh = SSH(Vision_API.DF_IP()[0], "root", "radware")
                 ssh.command("sudo reboot", True)
+                time.sleep(3)
+                while not ping(list(DTCT.DP_Info.keys())[0]):
+                    time.sleep(0.5)
+                    pass
+                DTCT.DF_Info_Update()
             except:
                 ssh.Close()
         if Vision:
