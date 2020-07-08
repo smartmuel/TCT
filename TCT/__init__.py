@@ -88,7 +88,7 @@ class Configuration(object):
                             flag = False
                         except:
                             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-                    stdin, stdout, stderr = self.ssh.exec_command("ifconfig")
+                    stdin, stdout, stderr = ssh.exec_command("ifconfig")
                     string = "".join(stdout.readlines())
                     match = re.search(r'G2.*', "".join(string), re.DOTALL)
                     match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
