@@ -56,10 +56,9 @@ class Configuration(object):
         self.DF_Info = dict()
         self.DF_HA = False
         self.json_file = json_file
+        with open(json_file, "r") as read_file:
+            self.json = json.load(read_file)
         try:
-            with open(json_file, "r") as read_file:
-                self.json = json.load(read_file)
-
             #DP_Info
             url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
             fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
@@ -89,13 +88,7 @@ class Configuration(object):
                             flag = False
                         except:
                             pass
-                    flag = True
-                    while flag:
-                        try:
-                            stdin, stdout, stderr = self.ssh.exec_command("ifconfig")
-                            flag = False
-                        except:
-                            pass
+                    stdin, stdout, stderr = self.ssh.exec_command("ifconfig")
                     string = "".join(stdout.readlines())
                     match = re.search(r'G2.*', "".join(string), re.DOTALL)
                     match = re.search(r'\d+\.\d+\.\d+\.\d+', match.group(0))
