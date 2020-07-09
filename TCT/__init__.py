@@ -984,20 +984,27 @@ class BP(object):
         for i in Session:
             self.bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='true')
         self.bps.saveNormalTest(name_=Test_Name, force='True')
-        self.TestNum = self.bps.runTest(modelname=Test_Name, group=1)
+        DTCT["BP_Test_ID"] = self.bps.runTest(modelname=Test_Name, group=1)
+        self.bps.logout()
 
-    # Stopping BP
-    def Stop(self, csv=False):
+    @staticmethod
+    def Stop(csv=False):
         try:
+            bps = BPS((DTCT["BP_IP"]), (DTCT["BP_Username"]), (DTCT["BP_Password"]))
+            # login
+            bps.login()
             # stopping test
-            self.bps.stopTest(testid=self.TestNum)
+            bps.stopTest(testid=DTCT["BP_Test_ID"])
             # logging out
             if csv:
-                self.bps.exportTestReport(self.TestNum, "Test_Report.csv", "Test_Report")
+                bps.exportTestReport(DTCT["BP_Test_ID"], "Test_Report.csv", "Test_Report")
         except:
-            print(getframeinfo(currentframe()).lineno, "stop error")
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
         finally:
-            self.bps.logout()
+            try:
+                bps.logout()
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
 
 
 class SSH(object):
@@ -1259,8 +1266,10 @@ class Syslog(object):
         self.telnet = Telnet()
         self.telnet.DP_Syslog_ADD()
         Vision_API.Syslog_ADD()
+        t1 = threading.Thread(target=self.Server)
+        t1.start()
 
-    def __call__(self, HOST=DTCT["Syslog_IP"]):
+    def Server(self, HOST=DTCT["Syslog_IP"]):
 
         try:
             try:

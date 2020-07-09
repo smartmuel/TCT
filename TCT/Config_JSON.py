@@ -48,7 +48,8 @@ except:
     "Vision_IP": "1.1.1.1",
     "Vision_Password": "Password",
     "Vision_Username": "Username",
-    "OngoingProtections": 0
+    "OngoingProtections": 0,
+    "Delay": 5
 }
         json.dump(TCT_json, read_file, ensure_ascii=False, indent=4, sort_keys=True)
         DTCT1 = TCT_json
