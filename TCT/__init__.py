@@ -1143,7 +1143,7 @@ class Telnet(object):
 class Vision_API(object):
     flag = False
 
-    def __init__(self, get = "", Vision=DTCT["Vision_IP"]):
+    def __init__(self, Vision=DTCT["Vision_IP"]):
         self.Vision = Vision
         url = f"https://{self.Vision}/mgmt/system/user/login"
         fill_json = {"username": DTCT["Vision_Username"], "password": DTCT["Vision_Password"]}
@@ -1156,8 +1156,13 @@ class Vision_API(object):
             self.flag = True
             if debug_prints_flag:
                 print(getframeinfo(currentframe()).lineno, response.text)
-        if get:
-            self.Get(url=get,Logout=True)
+
+    def Get(self, url, Logout=False):
+        response = requests.get(url, verify=False, data=None, cookies=self.cookie)
+        if Logout:
+            self.Logout()
+        return response.json()
+
     @staticmethod
     def Syslog_ADD(IP=DTCT["Syslog_IP"], Level="DEBUG"):
         url = f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/SyslogAlerts/add"
@@ -1181,12 +1186,6 @@ class Vision_API(object):
         api.Logout()
         if debug_prints_flag:
             print(getframeinfo(currentframe()).lineno, response.text)
-
-    def Get(self, url, Logout=False):
-        response = requests.get(url, verify=False, data=None, cookies=self.cookie)
-        if Logout:
-            self.Logout()
-        return response.json()
 
     @staticmethod
     def DF_IP():
@@ -1289,10 +1288,10 @@ class Syslog(object):
             self.server.shutdown()
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-        api = Vision_API(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
-        if len(api) > 0:
-            api = Vision_API(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections")
-            DTCT["OngoingProtections"] = len(api["OngoingProtections"])
+        api = Vision_API()
+        if len(api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')) > 0:
+            com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections")
+            DTCT["OngoingProtections"] = len(com["OngoingProtections"])
         else:
             DTCT["OngoingProtections"] = 0
         DTCT.save()
