@@ -63,11 +63,9 @@ class Configuration(object):
             url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
             fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
             response = requests.post(url, verify=False, data=None, json=fill_json)
-            print(response)
             cookie = response.cookies
             url = f"https://{self.json['Vision_IP']}/mgmt/device/df/config/MitigationDevices"
             response = requests.get(url, verify=False, data=None, cookies=cookie).json()
-            print(response)
             try:
                 for i in response["MitigationDevices"]:
                     if i["type"] == "DefensePro":
