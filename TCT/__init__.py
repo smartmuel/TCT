@@ -51,6 +51,7 @@ frame_size = 77
 
 class Configuration(object):
     def __init__(self, json_file):
+        print(os.getcwd())
         self.path = os.getcwd()
         self.DP_Info = dict()
         self.DF_Info = dict()

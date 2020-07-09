@@ -8,7 +8,7 @@ def install(package):
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-Lib = ["Selenium", "requests","paramiko","pandas","bps_restpy","chromedriver_autoinstaller"]
+Lib = ["Selenium", "requests","paramiko","pandas","bps_restpy","chromedriver_autoinstaller","pytest","allure-pytest"]
 for i in Lib:
     try:
         install(i)
