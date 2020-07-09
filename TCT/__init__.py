@@ -1143,7 +1143,7 @@ class Telnet(object):
 class Vision_API(object):
     flag = False
 
-    def __init__(self, Vision=DTCT["Vision_IP"]):
+    def __init__(self, get = "", Vision=DTCT["Vision_IP"]):
         self.Vision = Vision
         url = f"https://{self.Vision}/mgmt/system/user/login"
         fill_json = {"username": DTCT["Vision_Username"], "password": DTCT["Vision_Password"]}
@@ -1156,22 +1156,29 @@ class Vision_API(object):
             self.flag = True
             if debug_prints_flag:
                 print(getframeinfo(currentframe()).lineno, response.text)
-
-    def Syslog_ADD(self, IP=DTCT["Syslog_IP"], Level="DEBUG"):
-        url = f"https://{self.Vision}/mgmt/device/df/config/SyslogAlerts/add"
+        if get:
+            self.Get(url=get,Logout=True)
+    @staticmethod
+    def Syslog_ADD(IP=DTCT["Syslog_IP"], Level="DEBUG"):
+        url = f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/SyslogAlerts/add"
         json = {
             "ip": IP,
             "port": "514",
             "severity": Level,
             "description": ""
         }
-        response = requests.post(url, verify=False, data=None, json=json, cookies=self.cookie)
+        api = Vision_API()
+        response = requests.post(url, verify=False, data=None, json=json, cookies=api.cookie)
+        api.Logout()
         if debug_prints_flag:
             print(getframeinfo(currentframe()).lineno, response.text)
 
-    def Syslog_DELETE(self, IP=DTCT["Syslog_IP"]):
-        url = f"https://{self.Vision}/mgmt/device/df/config/SyslogAlerts/{IP}"
-        response = requests.delete(url, verify=False, data=None, cookies=self.cookie)
+    @staticmethod
+    def Syslog_DELETE(IP=DTCT["Syslog_IP"]):
+        url = f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/SyslogAlerts/{IP}"
+        api = Vision_API()
+        response = requests.delete(url, verify=False, data=None, cookies=api.cookie)
+        api.Logout()
         if debug_prints_flag:
             print(getframeinfo(currentframe()).lineno, response.text)
 
@@ -1252,8 +1259,7 @@ class Syslog(object):
     def __init__(self):
         self.telnet = Telnet()
         self.telnet.DP_Syslog_ADD()
-        self.API = Vision_API()
-        self.API.Syslog_ADD()
+        Vision_API.Syslog_ADD()
 
     def __call__(self, HOST=DTCT["Syslog_IP"]):
 
@@ -1275,16 +1281,21 @@ class Syslog(object):
         try:
             self.telnet.DP_Syslog_DELETE()
         except:
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
             self.telnet = Telnet()
             self.telnet.DP_Syslog_DELETE()
-        self.API.Syslog_DELETE()
-        self.API.Logout()
+        Vision_API.Syslog_DELETE()
         try:
             self.server.shutdown()
         except:
-            pass
-        print(getframeinfo(currentframe()).lineno, self.start)
-        print(getframeinfo(currentframe()).lineno, self.end)
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+        api = Vision_API(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
+        if len(api) > 0:
+            api = Vision_API(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections")
+            DTCT["OngoingProtections"] = len(api["OngoingProtections"])
+        else:
+            DTCT["OngoingProtections"] = 0
+        DTCT.save()
 
 
 class Check(object):
