@@ -1357,7 +1357,7 @@ class Check(object):
             try:
                 api = Vision_API()
                 response = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
-                for i in response1["BgpPeers"]:
+                for i in response["BgpPeers"]:
                     if i["state"] != "ESTABLISHED":
                         break
                 else:
