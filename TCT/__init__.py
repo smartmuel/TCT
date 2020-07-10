@@ -1297,7 +1297,6 @@ class Check(object):
     class DP(object):
 
         @staticmethod
-        @frame_decorator
         def Port_Error(Legit_Only=False):
             flag = True  # output flag
             try:
@@ -1333,7 +1332,6 @@ class Check(object):
                 return flag
 
         @staticmethod
-        @frame_decorator
         def No_BDOS_Attack():
             flag = False
             try:
@@ -1352,8 +1350,8 @@ class Check(object):
                 return flag
 
     class DF(object):
+
         @staticmethod
-        @frame_decorator
         def BGP_Established():
             flag = False
             try:
@@ -1370,7 +1368,6 @@ class Check(object):
                 return flag
 
         @staticmethod
-        @frame_decorator
         def BGP_Announcements():
             flag = False
             api = Vision_API()
@@ -1393,6 +1390,7 @@ class Check(object):
         pass
 
     class FD(object):
+
         @staticmethod
         def No_Detection():
             flag = False
@@ -1410,6 +1408,7 @@ class Check(object):
         pass
 
     class Other(object):
+
         @staticmethod
         def Ping_All_Components(Fail_Time=15):
             start = time.perf_counter()
