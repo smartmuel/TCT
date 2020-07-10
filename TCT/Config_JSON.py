@@ -35,6 +35,8 @@ except:
     "DP_Username": "Username",
     "Driver_Path": "",
     "FD_IP": "1.1.1.1",
+    "FD_Password": "Password",
+    "FD_Username": "Username",
     "LOG_FILE": "syslog_AMS.log",
     "MSSP_Dash_URL": "https://1.1.1.1/dashboard#/dashboard?r=5e579021d29d2001cc0593b8",
     "MSSP_Password": "Password",

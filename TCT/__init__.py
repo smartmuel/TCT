@@ -51,7 +51,7 @@ frame_size = 77
 
 class Configuration(object):
     def __init__(self, json_file):
-        print(os.getcwd())
+        print("json file in:", os.getcwd())
         self.path = os.getcwd()
         self.DP_Info = dict()
         self.DF_Info = dict()
@@ -1313,7 +1313,7 @@ class Check(object):
         @staticmethod
         @frame_decorator
         def Port_Error(Legit_Only=False):
-            flag = False  # output flag
+            flag = True  # output flag
             try:
                 for i in DTCT.DP_Info.values():  # For all DPs that the DF is in contact with
                     telnet = Telnet(i)
@@ -1324,7 +1324,7 @@ class Check(object):
                                 rf"^{j}\s+", com, re.IGNORECASE):
                             print(f"{getframeinfo(currentframe()).lineno} Port Error:".center(frame_size, "#"))
                             print(getframeinfo(currentframe()).lineno, com)
-                            break
+                            return False
 
                     else:
                         if Legit_Only:
@@ -1340,9 +1340,7 @@ class Check(object):
                                     f"{getframeinfo(currentframe()).lineno} dpe-statistics Error:".center(frame_size,
                                                                                                           '#'))
                                 print(getframeinfo(currentframe()).lineno, com)
-                                break
-                else:
-                    flag = True
+                                return False
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
             finally:
