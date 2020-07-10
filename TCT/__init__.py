@@ -46,8 +46,6 @@ except:
 cwd = os.getcwd()
 debug_prints_flag = False
 DP_index = "0"
-frame_size = 77
-
 
 class Configuration(object):
     def __init__(self, json_file):
@@ -121,7 +119,6 @@ class Configuration(object):
             json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
         os.chdir(cwd)
 
-
 try:
     os.chdir('..')
     DTCT = Configuration("Data_For_TCT.json")
@@ -144,7 +141,6 @@ except:
         except:
             print(getframeinfo(currentframe()).lineno, "Configure the json and then work with the package")
 
-
 def ping(host):
     """
     Returns True if host (str) responds to a ping request.
@@ -158,16 +154,6 @@ def ping(host):
     command = ['ping', param, '1', host]
 
     return subprocess.call(command) == 0
-
-
-def frame_decorator(func):
-    def wrapper(*args, **kwargs):
-        print("# " * frame_size)
-        func(*args, **kwargs)
-        print("# " * frame_size)
-
-    return wrapper
-
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
@@ -1408,7 +1394,6 @@ class Check(object):
 
     class FD(object):
         @staticmethod
-        @frame_decorator
         def No_Detection():
             flag = False
             try:
