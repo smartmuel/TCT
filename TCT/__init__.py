@@ -2,7 +2,7 @@
 
 import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys, socket
 from inspect import currentframe, getframeinfo
-
+from . import Config_JSON_CLI as CLI
 try:
     from selenium import webdriver
     from selenium.webdriver.support.ui import WebDriverWait
@@ -46,6 +46,17 @@ except:
 cwd = os.getcwd()
 debug_prints_flag = False
 DP_index = "0"
+
+with open("Config_Info.json","r") as file:
+    Config_Json = json.load(file)
+
+class cd(object):
+    def __init__(self, path):
+        os.chdir(path)
+    def __enter__(self):
+        return self
+    def __exit__(self, type, value, traceback):
+        os.chdir(cwd)
 
 class Configuration(object):
     def __init__(self, json_file):
@@ -114,34 +125,35 @@ class Configuration(object):
         requests.post(url, verify=False, cookies=cookie)
 
     def save(self):
-        os.chdir(self.path)
-        self.json["Syslog_Start"] = list(Syslog.start)
-        self.json["Syslog_End"] = list(Syslog.end)
-        with open(self.json_file, 'w') as outfile:
-            json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
-        os.chdir(cwd)
+        with cd(self.path):
+            self.json["Syslog_Start"] = list(Syslog.start)
+            self.json["Syslog_End"] = list(Syslog.end)
+            with open(self.json_file, 'w') as outfile:
+                json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
 
 try:
-    os.chdir('..')
-    DTCT = Configuration("Data_For_TCT.json")
-    os.chdir(cwd)
+    with cd(os.path.dirname(Config_Json["Json_Path"])):
+        DTCT = Configuration(os.path.basename(Config_Json["Json_Path"]))
 except:
     try:
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
-        DTCT = Configuration("Data_For_TCT.json")
-        os.chdir(cwd)
+        with cd(".."):
+            DTCT = Configuration("Data_For_TCT.json")
     except:
         try:
-            os.chdir(cwd)
-            path = pathlib.Path().absolute()
-            DTCT_Path = ""
-            for r, d, f in os.walk(path):
-                if "Data_For_TCT.json" in f:
-                    DTCT_Path = os.path.join(r, "Data_For_TCT.json")
-                    break
-            DTCT = Configuration(DTCT_Path)
+            with cd(os.path.dirname(os.path.realpath(__file__))):
+                DTCT = Configuration("Data_For_TCT.json")
         except:
-            print(getframeinfo(currentframe()).lineno, "Configure the json and then work with the package")
+            try:
+                os.chdir(cwd)
+                path = pathlib.Path().absolute()
+                DTCT_Path = ""
+                for r, d, f in os.walk(path):
+                    if "Data_For_TCT.json" in f:
+                        DTCT_Path = os.path.join(r, "Data_For_TCT.json")
+                        break
+                DTCT = Configuration(DTCT_Path)
+            except:
+                CLI.Json()
 
 def ping(host):
     """
