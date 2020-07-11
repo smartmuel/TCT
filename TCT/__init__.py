@@ -132,23 +132,23 @@ class Configuration(object):
                 json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
 
 try:
-    with cd(os.path.dirname(Config_Json["Json_Path"])):
-        DTCT = Configuration(os.path.basename(Config_Json["Json_Path"]))
+    with cd(Config_Json["Json_Folder_Path"]):
+        DTCT = Configuration(Config_Json["Json_Name"])
 except:
     try:
         with cd(".."):
-            DTCT = Configuration("Data_For_TCT.json")
+            DTCT = Configuration(Config_Json["Json_Name"])
     except:
         try:
             with cd(os.path.dirname(os.path.realpath(__file__))):
-                DTCT = Configuration("Data_For_TCT.json")
+                DTCT = Configuration(Config_Json["Json_Name"])
         except:
             try:
                 os.chdir(cwd)
                 path = pathlib.Path().absolute()
                 DTCT_Path = ""
                 for r, d, f in os.walk(path):
-                    if "Data_For_TCT.json" in f:
+                    if Config_Json["Json_Name"] in f:
                         DTCT_Path = os.path.join(r, "Data_For_TCT.json")
                         break
                 DTCT = Configuration(DTCT_Path)
