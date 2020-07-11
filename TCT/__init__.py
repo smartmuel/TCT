@@ -941,44 +941,44 @@ class Driver(object):
 
 
 class BP(object):
-    __slots__ = ("__dict__", "bps")
 
-    def __init__(self, AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
-                 Session_MAX=DTCT["BP_Session_Max_Number"] + 1, Test_Name=DTCT["BP_Test"]):
-        self.bps = BPS((DTCT["BP_IP"]), (DTCT["BP_Username"]), (DTCT["BP_Password"]))
+    @staticmethod
+    def Start(AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
+              Session_MAX=DTCT["BP_Session_Max_Number"] + 1, Test_Name=DTCT["BP_Test"]):
+        bps = BPS((DTCT["BP_IP"]), (DTCT["BP_Username"]), (DTCT["BP_Password"]))
         # login
-        self.bps.login()
+        bps.login()
         # showing current port reservation state
-        self.bps.portsState()
+        bps.portsState()
         # reserving the ports.
-        self.bps.reservePorts(slot=DTCT["BP_Reserve_Slot"],
-                              portList=[DTCT["BP_Reserve_Port_1"], DTCT["BP_Reserve_Port_2"]],
-                              group=1, force=True)
+        bps.reservePorts(slot=DTCT["BP_Reserve_Slot"],
+                         portList=[DTCT["BP_Reserve_Port_1"], DTCT["BP_Reserve_Port_2"]],
+                         group=1, force=True)
         # running the canned test 'AppSim' using group 1
         # please note the runid generated. It will be used for many more functionalities
-        self.bps.setNormalTest(NN_name=Test_Name)
-        self.bps.viewNormalTest()
+        bps.setNormalTest(NN_name=Test_Name)
+        bps.viewNormalTest()
         NORUN = []
         append = NORUN.append
         for i in range(1, Appsim_MAX):
             if i not in AppSim:
                 append(i)
         for i in NORUN:
-            self.bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='false')
+            bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='false')
         for i in AppSim:
-            self.bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='true')
+            bps.modifyNormalTest(componentId=(f'appsim_{i}'), elementId='active', Value='true')
         NORUN = []
         append = NORUN.append
         for i in range(1, Session_MAX):
             if i not in Session:
                 append(i)
         for i in NORUN:
-            self.bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='false')
+            bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='false')
         for i in Session:
-            self.bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='true')
-        self.bps.saveNormalTest(name_=Test_Name, force='True')
-        DTCT["BP_Test_ID"] = self.bps.runTest(modelname=Test_Name, group=1)
-        self.bps.logout()
+            bps.modifyNormalTest(componentId=(f'sessionsender_{i}'), elementId='active', Value='true')
+        bps.saveNormalTest(name_=Test_Name, force='True')
+        DTCT["BP_Test_ID"] = bps.runTest(modelname=Test_Name, group=1)
+        bps.logout()
 
     @staticmethod
     def Stop(csv=False):
