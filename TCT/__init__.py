@@ -158,7 +158,7 @@ def ping(host):
     if debug_prints_flag:
         response = subprocess.call(command)
     else:
-        subprocess.call(command, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
+        response = subprocess.call(command, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
     return  response == 0
 
 def get_ip_address():
