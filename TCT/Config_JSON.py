@@ -45,7 +45,7 @@ except:
     "SSH_IP": "1.1.1.1",
     "SSH_Password": "Password",
     "SSH_Username": "Username",
-    "Syslog_IP": "1.1.1.1",
+    "Syslog_IP": "",
     "Syslog_Start": [],
     "Syslog_End": [],
     "Vision_IP": "1.1.1.1",

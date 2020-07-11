@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 
-import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys
+import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys, socket
 from inspect import currentframe, getframeinfo
 
 try:
@@ -160,6 +160,11 @@ def ping(host):
     else:
         subprocess.call(command, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
     return  response == 0
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
@@ -1079,7 +1084,7 @@ class SSH(object):
 
 
 class Telnet(object):
-    def __init__(self, HOST=list(DTCT.DP_Info.values())[0], user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
+    def __init__(self, HOST, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
         self.tn = telnetlib.Telnet()
         self.tn.open(HOST)
         self.tn.read_until(b"User:")
@@ -1097,15 +1102,23 @@ class Telnet(object):
             self.tn.close()
         return output
 
-    def DP_Syslog_ADD(self, ip=DTCT["Syslog_IP"]):
-        command = "manage syslog destination add " + ip
-        self.tn.write(command.encode('ascii') + b"\n")
-        print(getframeinfo(currentframe()).lineno, self.tn.read_until(b"#", 30).decode('utf-8'))
+    @staticmethod
+    def DP_Syslog_ADD(ip=DTCT["Syslog_IP"]):
+        for i in DTCT.DP_Info.values():
+            telnet = Telnet(i)
+            ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
+            output = telnet.Command(f"manage syslog destination add {ip}",True)
+            if debug_prints_flag:
+                print(getframeinfo(currentframe()).lineno, output)
 
-    def DP_Syslog_DELETE(self, ip=DTCT["Syslog_IP"]):
-        command = "manage syslog destination del " + ip
-        self.tn.write(command.encode('ascii') + b"\n")
-        print(getframeinfo(currentframe()).lineno, self.tn.read_until(b"#", 30).decode('utf-8'))
+    @staticmethod
+    def DP_Syslog_DELETE(ip=DTCT["Syslog_IP"]):
+        for i in DTCT.DP_Info.values():
+            telnet = Telnet(i)
+            ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
+            output = telnet.Command(f"manage syslog destination del {ip}",True)
+            if debug_prints_flag:
+                print(getframeinfo(currentframe()).lineno, output)
 
     @staticmethod
     def DP_Check_Port_Error(Legit_Only=False):
@@ -1256,19 +1269,18 @@ class Syslog(object):
     dp_term = 0
 
     def __init__(self):
-        self.telnet = Telnet()
-        self.telnet.DP_Syslog_ADD()
+        Telnet.DP_Syslog_ADD()
         Vision_API.Syslog_ADD()
         t1 = threading.Thread(target=self.Server)
         t1.start()
 
-    def Server(self, HOST=DTCT["Syslog_IP"]):
-
+    def Server(self):
         try:
+            HOST = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
             try:
                 os.remove("syslog_AMS.log")
             except:
-                print(getframeinfo(currentframe()).lineno, "NO Syslog file to delete ")
+                pass
             logging.basicConfig(level=logging.INFO, format='%(message)s', datefmt='', filename=DTCT["LOG_FILE"],
                                 filemode='a')
             self.server = socketserver.UDPServer((HOST, 514), SyslogUDPHandler)
@@ -1280,12 +1292,10 @@ class Syslog(object):
 
     def DELETE(self):
         try:
-            self.telnet.DP_Syslog_DELETE()
+            Telnet.DP_Syslog_DELETE()
+            Vision_API.Syslog_DELETE()
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-            self.telnet = Telnet()
-            self.telnet.DP_Syslog_DELETE()
-        Vision_API.Syslog_DELETE()
         try:
             self.server.shutdown()
         except:
