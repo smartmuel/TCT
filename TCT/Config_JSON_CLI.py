@@ -61,7 +61,7 @@ class Json(object):
                 print("That's not a valid option!")"""
         for i in [your_key for your_key in self.json_data.keys() if "Vision" in your_key]:
             self.json_data[i] = input(f"{i}:")
-        List = ["All","Vision","FlowDetector","MSSP","DefenseFlow","DefencePro","BreakingPoint"]
+        List = ["All","Vision","FD","MSSP","DF","DP","BP"]
         while True:
             for i,j in enumerate(List):
                 print(f"{i+1}\t{j}")
@@ -71,7 +71,11 @@ class Json(object):
                     break
                 Index = int(Index)
                 if 0 < Index < len(List):
-                    for i in [your_key for your_key in self.json_data.keys() if List[Index-1] in your_key]:
+                    if List[Index-1] in "All":
+                        filter = "_"
+                    else:
+                        filter = List[Index-1]
+                    for i in [your_key for your_key in self.json_data.keys() if filter in your_key]:
                         data = input(f"{i}:")
                         if data:
                             self.json_data[i] = data

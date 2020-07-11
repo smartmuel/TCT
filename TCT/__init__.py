@@ -154,6 +154,10 @@ except:
                 DTCT = Configuration(DTCT_Path)
             except:
                 CLI.Json()
+                with cd(os.path.dirname(os.path.realpath(__file__))):
+                    with open("Config_Info.json", "r") as file:
+                        Config_Json = json.load(file)
+                    DTCT = Configuration(Config_Json["Json_Name"])
 
 def ping(host):
     """
