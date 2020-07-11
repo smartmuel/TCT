@@ -1103,7 +1103,7 @@ class Telnet(object):
         return output
 
     @staticmethod
-    def DP_Syslog_ADD(ip=DTCT["Syslog_IP"]):
+    def DP_Syslog_ADD():
         for i in DTCT.DP_Info.values():
             telnet = Telnet(i)
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
@@ -1112,7 +1112,7 @@ class Telnet(object):
                 print(getframeinfo(currentframe()).lineno, output)
 
     @staticmethod
-    def DP_Syslog_DELETE(ip=DTCT["Syslog_IP"]):
+    def DP_Syslog_DELETE():
         for i in DTCT.DP_Info.values():
             telnet = Telnet(i)
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
@@ -1323,7 +1323,7 @@ class Check(object):
                     for j in DTCT["DP_Ports"]:  # For the ports the configured at Data_For_TCT.json
                         if (not re.search(rf"{j}\s+[0-9]+\s+0\s+0\s+[0-9]+\s+0\s+0", com, re.IGNORECASE)) and re.search(
                                 rf"^{j}\s+", com, re.IGNORECASE):
-                            print(f"{getframeinfo(currentframe()).lineno} Port Error:".center(frame_size, "#"))
+                            print(f"{getframeinfo(currentframe()).lineno} Port Error:")
                             print(getframeinfo(currentframe()).lineno, com)
                             return False
 
@@ -1338,8 +1338,7 @@ class Check(object):
                                     not re.search(rf"Total Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", com,
                                                   re.IGNORECASE)):
                                 print(
-                                    f"{getframeinfo(currentframe()).lineno} dpe-statistics Error:".center(frame_size,
-                                                                                                          '#'))
+                                    f"{getframeinfo(currentframe()).lineno} dpe-statistics Error:")
                                 print(getframeinfo(currentframe()).lineno, com)
                                 return False
             except:
@@ -1355,7 +1354,7 @@ class Check(object):
                     telnet = Telnet(i)
                     com = telnet.Command("system internal security bdos attacks", True).split("\n")
                     if len(com) > 4:
-                        print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:".center(frame_size, "#"))
+                        print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:")
                         print(getframeinfo(currentframe()).lineno, com)
                         break
                 else:
@@ -1441,7 +1440,6 @@ class Check(object):
                         flag = flag and ping(i)
                     if flag:
                         break
-                    print("#" * frame_size)
                     time.sleep(1)
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
