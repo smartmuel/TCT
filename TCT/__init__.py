@@ -73,6 +73,8 @@ class Configuration(object):
                 print(getframeinfo(currentframe()).lineno, "NO DP device detected, please check configuration")
             self.DF_Info_Update()
 
+        except NameError:
+            print(getframeinfo(currentframe()).lineno,"Check if paramiko installed")
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
 
@@ -153,7 +155,11 @@ def ping(host):
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
 
-    return subprocess.call(command) == 0
+    if debug_prints_flag:
+        response = subprocess.call(command)
+    else:
+        subprocess.call(command, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
+    return  response == 0
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
