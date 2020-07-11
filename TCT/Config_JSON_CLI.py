@@ -41,6 +41,7 @@ class Json(object):
     }
     try:
         with open("Config_Info.json","r") as file:
+
             pass
     except:
         with open("Config_Info.json","w") as file:
@@ -78,11 +79,12 @@ class Json(object):
                 print("That's not a valid option!")
         path = input("Please Enter the Full Folder Path:")
         name = input("Please Enter File Name:")
-        with open("Config_Info.json", "a") as file:
+        with open("Config_Info.json", "r") as file:
             json1 = json.load(file)
             json1["Json_Folder_Path"] = path
             if name:
                 json1["Json_Name"] = f"{name.replace('.json','')}.json"
+        with open("Config_Info.json", "w") as file:
             json.dump(json1, file, ensure_ascii=False, indent=4, sort_keys=True)
         try:
             with open (os.path.join(json1["Json_Folder_Path"],json1["Json_Name"]),"w") as file:
