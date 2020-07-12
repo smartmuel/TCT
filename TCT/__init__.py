@@ -169,22 +169,10 @@ except:
                     DTCT = Configuration(DTCT_Path)
 
 def ping(host):
-    """
-    Returns True if host (str) responds to a ping request.
-    Remember that a host may not respond to a ping (ICMP) request even if the host name is valid.
-    """
-
-    # Option for the number of packets as a function of
     param = '-n' if platform.system().lower() == 'windows' else '-c'
-
-    # Building the command. Ex: "ping -c 1 google.com"
-    command = ['ping', param, '1', host]
-
-    if debug_prints_flag:
-        response = subprocess.call(command)
-    else:
-        response = subprocess.call(command, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
-    return  response == 0
+    command = f"ping {param} 1 {host}"
+    response = os.popen(command).read().lower()
+    return 'unreachable' not in response and "100%" not in response
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
