@@ -1438,7 +1438,7 @@ class Check(object):
     class Other(object):
 
         @staticmethod
-        def Ping_All_Components(Fail_Time=15):
+        def Ping_All_Components(Fail_Time=5, MSSP = True):
             start = time.perf_counter()
             flag = True
             try:
@@ -1448,6 +1448,9 @@ class Check(object):
                     Components_List = [Vision_API.DF_IP()[0]]
                 Components_List += [i for i in DTCT.DP_Info.values()]
                 Components_List.append(DTCT["Vision_IP"])
+                if MSSP:
+                    match = re.search(r'\d+\.\d+\.\d+\.\d+', DTCT["MSSP_Dash_URL"])
+                    Components_List.append(match.group(0))
                 while (time.perf_counter() - start < (Fail_Time * 60)):
                     for i in Components_List:
                         flag = flag and ping(i)
