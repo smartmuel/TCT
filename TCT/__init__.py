@@ -155,14 +155,18 @@ except:
                 DTCT = Configuration(DTCT_Path)
             except:
                 CLI.Json()
-                os.chdir(cwd)
-                path = pathlib.Path().absolute()
-                DTCT_Path = ""
-                for r, d, f in os.walk(path):
-                    if Config_Json["Json_Name"] in f:
-                        DTCT_Path = os.path.join(r, "Data_For_TCT.json")
-                        break
-                DTCT = Configuration(DTCT_Path)
+                try:
+                    with cd(Config_Json["Json_Folder_Path"]):
+                        DTCT = Configuration(Config_Json["Json_Name"])
+                except:
+                    os.chdir(cwd)
+                    path = pathlib.Path().absolute()
+                    DTCT_Path = ""
+                    for r, d, f in os.walk(path):
+                        if Config_Json["Json_Name"] in f:
+                            DTCT_Path = os.path.join(r, "Data_For_TCT.json")
+                            break
+                    DTCT = Configuration(DTCT_Path)
 
 def ping(host):
     """
