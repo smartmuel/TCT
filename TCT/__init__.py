@@ -108,13 +108,14 @@ class Configuration(object):
             if i:
                 ssh = paramiko.SSHClient()
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                flag = True
-                while flag:
+                for _ in range(10):
                     try:
                         ssh.connect(i, port=22, username=self.json["DF_Username"], password=self.json["DF_Password"])
-                        flag = False
+                        break
                     except:
                         print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                else:
+                    continue
                 stdin, stdout, stderr = ssh.exec_command("ifconfig")
                 string = "".join(stdout.readlines())
                 match = re.search(r'G2.*', "".join(string), re.DOTALL)
