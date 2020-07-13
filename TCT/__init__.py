@@ -266,6 +266,8 @@ class Driver(object):
         return self.driver
 
     def Get(self, URL):
+        if "http" not in URL:
+            URL = f"http://{URL}"
         self.driver.get(URL)
         self.driver.fullscreen_window()
 
@@ -467,7 +469,6 @@ class Driver(object):
                     except:
                         print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
                         # Fail = True
-
     # Wait for target Element type in current page
     def Wait(self, ID, Type="auto", delay=10, **kwargs):
         Type = Type.lower()
