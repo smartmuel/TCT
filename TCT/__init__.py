@@ -44,6 +44,7 @@ except:
 
 """cwd = current work directory"""
 cwd = os.getcwd()
+print(f"cwd: {cwd}")
 debug_prints_flag = False
 DP_index = "0"
 
@@ -1377,6 +1378,10 @@ class Check(object):
             finally:
                 return flag
 
+        @staticmethod
+        def BDOS_Attacks():
+            pass
+
     class DF(object):
 
         @staticmethod
@@ -1426,6 +1431,19 @@ class Check(object):
                 response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
                 if len(response.json()["values"]) == 0:
+                    flag = True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
+
+        @staticmethod
+        def Detection_Syslog_DF():
+            flag = False
+            try:
+                response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
+                                        auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
+                if len(response.json()["values"]) == Syslog.start:
                     flag = True
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
