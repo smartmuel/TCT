@@ -1457,7 +1457,21 @@ class Check(object):
 
         @staticmethod
         def BDOS_Attacks():
-            pass
+            flag = True
+            try:
+                for i in list(DTCT.DP_Info.values()):
+                    telnet = Telnet(i)
+                    com = telnet.Command("system internal security bdos attacks", True).split("\n")
+                    if len(com) < 5:
+                        print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:")
+                        print(getframeinfo(currentframe()).lineno, com)
+                        break
+                else:
+                    flag = False
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                return flag
 
     class DF(object):
         """
