@@ -41,6 +41,12 @@ try:
 except:
     print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
     # pass
+try:
+    import pandas as pd
+    #pass
+except:
+    print(getframeinfo(currentframe()).lineno, "pandas is not installed")
+    # pass
 
 """cwd = current work directory"""
 cwd = os.getcwd()
@@ -51,6 +57,7 @@ DP_index = "0"
 with open("Config_Info.json","r") as file:
     Config_Json = json.load(file)
 
+# context managers for changing directory
 class cd(object):
     def __init__(self, path):
         os.chdir(path)
@@ -59,6 +66,7 @@ class cd(object):
     def __exit__(self, type, value, traceback):
         os.chdir(cwd)
 
+#
 class Configuration(object):
     def __init__(self, json_file):
         print("json file in:", os.getcwd())
@@ -133,6 +141,7 @@ class Configuration(object):
             with open(self.json_file, 'w') as outfile:
                 json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
 
+# Reading the configuration from json
 try:
     with cd(Config_Json["Json_Folder_Path"]):
         DTCT = Configuration(Config_Json["Json_Name"])
@@ -176,6 +185,9 @@ def ping(host):
     return 'unreachable' not in response and "100%" not in response
 
 def get_ip_address():
+    """
+    :return: the IP that can connect to 8.8.8.8
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
@@ -211,7 +223,7 @@ def prefix_decorator(prefix=""):
 
 
 class Driver(object):
-    __slots__ = ("__dict__", "driver", "Name", "url")
+
     try:
         os.mkdir("ScreenShots")
     except FileExistsError:
@@ -1021,9 +1033,17 @@ class BP(object):
 
 
 class SSH(object):
-    __slots__ = ("__dict__", "IP", "USER", "PASSWORD", "ssh")
+    """
+    Class for SSH
+    """
 
     def __init__(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+        """
+        Support only ipV4
+        :param IP:
+        :param USER:
+        :param PASSWORD:
+        """
         self.IP = IP
         self.USER = USER
         self.PASSWORD = PASSWORD
@@ -1033,6 +1053,9 @@ class SSH(object):
             self.ssh_connect(IP, USER, PASSWORD)
 
     def ssh_connect(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+        """
+        ssh connection
+        """
         if self.NOT_IP:
             return None
         try:
@@ -1049,6 +1072,11 @@ class SSH(object):
             print(getframeinfo(currentframe()).lineno, "ssh_connect failed")
 
     def command(self, COM, Close=False):
+        """
+        :param COM: the command
+        :param Close: if you want to close the connection
+        :return: returns the output of the command - not working all the time
+        """
         if self.NOT_IP:
             return None
         try:
@@ -1063,8 +1091,11 @@ class SSH(object):
 
     @staticmethod
     def PeakFlow():
+        """
+        PeakFlow Syslogs from remote linux server
+        """
         try:
-            ssh = SSH()
+            ssh = SSH(IP="10.170.19.111")
             ssh.command("python3 Attack_start.py")
             ssh.Close()
         except:
@@ -1120,7 +1151,7 @@ class Telnet(object):
     @staticmethod
     def DP_Syslog_ADD():
         for i in DTCT.DP_Info.values():
-            telnet = Telnet(i)
+            telnet = Telnet(i, user=DTCT["DP_Username"], password=DTCT["DP_Password"])
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
             output = telnet.Command(f"manage syslog destination add {ip}",True)
             if debug_prints_flag:
@@ -1129,7 +1160,7 @@ class Telnet(object):
     @staticmethod
     def DP_Syslog_DELETE():
         for i in DTCT.DP_Info.values():
-            telnet = Telnet(i)
+            telnet = Telnet(i, user=DTCT["DP_Username"], password=DTCT["DP_Password"])
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
             output = telnet.Command(f"manage syslog destination del {ip}",True)
             if debug_prints_flag:
@@ -1139,7 +1170,7 @@ class Telnet(object):
     def DP_Check_Port_Error(Legit_Only=False):
         for i in DTCT.DP_Info.values():
             flag = False
-            telnet = Telnet(i)
+            telnet = Telnet(i, user=DTCT["DP_Username"], password=DTCT["DP_Password"])
             c = telnet.Command("system inf-stats")
             for j in DTCT["DP_Ports"]:
                 if (not re.search(rf"{j}\s+[0-9]+\s+0\s+0\s+[0-9]+\s+0\s+0", c, re.IGNORECASE)) and re.search(
@@ -1169,6 +1200,10 @@ class Telnet(object):
 
 
 class Vision_API(object):
+    """
+    Login/Logout/Get from Vision with REST API
+    """
+    # flag that indicate the success of the login to vision
     flag = False
 
     def __init__(self, Vision=DTCT["Vision_IP"]):
@@ -1277,10 +1312,19 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
 
 class Syslog(object):
+    # Count of Syslog Start Detection from DF
     start = set()
+
+    # Count of Syslog End Detection from DF
     end = set()
+
+    # Count of total Syslog errors
     error = set()
+
+    # Count of total Imports to DP
     Import = 0
+
+    # Count of total DP terminations
     dp_term = 0
 
     def __init__(self):
@@ -1289,6 +1333,7 @@ class Syslog(object):
         t1 = threading.Thread(target=self.Server)
         t1.start()
 
+    # Setting the Syslog server
     def Server(self):
         try:
             HOST = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
@@ -1305,6 +1350,7 @@ class Syslog(object):
         except KeyboardInterrupt:
             print(getframeinfo(currentframe()).lineno, "Crtl+C Pressed. Shutting down.")
 
+    # Closing the Server and Saves Configuration
     def DELETE(self):
         try:
             Telnet.DP_Syslog_DELETE()
@@ -1325,7 +1371,13 @@ class Syslog(object):
 
 
 class Check(object):
+    """
+    Class For All The Tests
+    """
     class DP(object):
+        """
+        DP Tests
+        """
 
         @staticmethod
         def Port_Error(Legit_Only=False):
@@ -1384,6 +1436,9 @@ class Check(object):
             pass
 
     class DF(object):
+        """
+        DF Tests
+        """
 
         @staticmethod
         def BGP_Established():
@@ -1421,9 +1476,15 @@ class Check(object):
             return flag
 
     class Vision(object):
+        """
+        Vision Tests
+        """
         pass
 
     class FD(object):
+        """
+        FD Tests
+        """
 
         @staticmethod
         def No_Detection():
@@ -1452,9 +1513,15 @@ class Check(object):
                 return flag
 
     class BSN(object):
+        """
+        BSN Tests
+        """
         pass
 
     class Other(object):
+        """
+        Other Tests
+        """
 
         @staticmethod
         def Ping_All_Components(Fail_Time=5, MSSP = True):
