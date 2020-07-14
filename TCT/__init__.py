@@ -202,24 +202,25 @@ def file_check(extract = True, delay=5):
             for file in os.listdir(os.getcwd()):
                 if file.endswith(".crdownload"):
                     time.sleep(0.5)
-                    continue
-            for file in os.listdir(os.getcwd()):
-                if file.endswith(".zip"):
-                    if os.path.getsize(file) >0:
-                        #time.sleep(3)
-                        if extract:
-                            with ZipFile(file, 'r') as zip:
-                                zip.extractall()
-                        os.remove(file)
-                        break
+                    break
+            else:
+                for file in os.listdir(os.getcwd()):
+                    if file.endswith(".zip"):
+                        if os.path.getsize(file) > 0:
+                            #time.sleep(3)
+                            if extract:
+                                with ZipFile(file, 'r') as zip:
+                                    zip.extractall()
+                            os.remove(file)
+                            break
                     elif file.endswith(".tar.gz") or file.endswith(".csv"):
                         if os.path.getsize(file) > 0:
                             os.remove(file)
                             break
-            else:
-                continue
-            flag = True
-            break
+                else:
+                    continue
+                flag = True
+                break
     except:
         print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
     finally:
@@ -347,9 +348,8 @@ class Driver(object):
         DTCT.save()
 
     # Driver enter Vision
-    def Vision(self):
+    def Vision(self, delay = 5):
         self.Get(f"https://{DTCT['Vision_IP']}/")
-        delay = 5  # seconds
         if time.perf_counter() - self.start > 1200:
             self.Password_Done = False
         if not self.Password_Done:
@@ -362,9 +362,7 @@ class Driver(object):
                     self.Fill(
                         "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
                         DTCT["Vision_Password"], click=False)
-                    if self.Wait("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button"):
-                        self.Click(
-                            "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
+                    self.ClickIf("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
             except TimeoutException:
                 print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
             try:
@@ -565,11 +563,11 @@ class Driver(object):
                 return False
 
     # Clicking on target Element type in current page
-    def Click(self, ID, Type="auto", wait="No", delay=5, **kwargs):
+    def Click(self, ID, Type="auto", wait="No", delay=5, tries = 10, **kwargs):
         ID = ID.strip()
         Type = Type.lower()
         if "auto" in Type:
-            for i in range(10):
+            for i in range(tries):
                 if ID[0] == "#" or " > " in ID:
                     try:
                         self.Wait(ID)
@@ -739,9 +737,9 @@ class Driver(object):
             print(getframeinfo(currentframe()).lineno, "No Such Type as " + Type)
 
     # Clicking on target Element if displayed
-    def ClickIf(self, ID, delay=5, **kwargs):
-        if self.Wait(ID,delay=delay):
-            self.Click(ID)
+    def ClickIf(self, ID, delay=5, tries = 1,**kwargs):
+        if self.Wait(ID, delay = delay):
+            self.Click(ID, tries = tries)
 
     # Click on target Element type on target iframe
     def FrameS(self, frame, ROW_ID, Type="CSS", CLK="No_Text", fill="No_Text", **kwargs):
@@ -1075,6 +1073,7 @@ class BP(object):
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
         finally:
             bps.logout()
+
 
 class SSH(object):
     """
@@ -1501,8 +1500,6 @@ class Check(object):
                 for i in DTCT.DP_Info.keys():
                     driver.Click(f"gwt-debug-DevicesTree_Node_{i}")
                     driver.ClickIf('//*[@title="Click to lock the device"]', delay=3)
-                    """if driver.Wait('//*[@title="Click to lock the device"]', Type="XPath", delay=3):	
-                        driver.Click('//*[@title="Click to lock the device"]', Type="Xpath")	"""
                     driver.Click("gwt-debug-DeviceControlBar_Operations")
                     while not driver.Wait("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support",delay=10):
                         driver.Click("gwt-debug-DeviceControlBar_Operations")
@@ -1572,7 +1569,7 @@ class Check(object):
                     "#dfc-vision-support > div > div > div:nth-child(1) > div > div > div:nth-child(1) > button")
                 driver.Click(
                     "body > div.ReactModalPortal > div > div > div > div:nth-child(4) > div:nth-child(1) > div > div:nth-child(1) > button")
-                flag = file_check()
+                flag = file_check(extract=False)
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
             finally:

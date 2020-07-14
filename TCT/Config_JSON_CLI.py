@@ -38,6 +38,7 @@ class Json(object):
     "Vision_Username": "Username",
     "OngoingProtections": 0,
     "Delay": 5,
+    "Fill_Name": "Test"
     }
     try:
         with open("Config_Info.json","r") as file:
