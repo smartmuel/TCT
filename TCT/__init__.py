@@ -194,7 +194,37 @@ def get_ip_address():
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
 
-def ZIP():
+def file_check(extract = True, delay=5):
+    start = time.perf_counter()
+    flag = False
+    try:
+        while time.perf_counter() - start < delay*60:
+            for file in os.listdir(os.getcwd()):
+                if file.endswith(".crdownload"):
+                    time.sleep(0.5)
+                    continue
+            for file in os.listdir(os.getcwd()):
+                if file.endswith(".zip"):
+                    if os.path.getsize(file) >0:
+                        #time.sleep(3)
+                        if extract:
+                            with ZipFile(file, 'r') as zip:
+                                zip.extractall()
+                        os.remove(file)
+                        break
+                    elif file.endswith(".tar.gz") or file.endswith(".csv"):
+                        if os.path.getsize(file) > 0:
+                            os.remove(file)
+                            break
+            else:
+                continue
+            flag = True
+            break
+    except:
+        print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+    finally:
+        return flag
+"""def ZIP():
     for file in os.listdir(os.getcwd()):
         if file.endswith(".zip"):
             file_name = file
@@ -203,7 +233,7 @@ def ZIP():
                 break
     else:
         time.sleep(0.5)
-        ZIP()
+        ZIP()"""
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
@@ -324,32 +354,17 @@ class Driver(object):
             self.Password_Done = False
         if not self.Password_Done:
             try:
-                self.Wait(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input")
-                self.Fill(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input",
-                    DTCT["Vision_Username"], click=False, Enter=False)
-                self.Fill(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
-                    DTCT["Vision_Password"], click=False)
-                self.Click(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
-                """                WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CSS_SELECTOR,
-                                                                                        '#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input')))
-                print(getframeinfo(currentframe()).lineno,"Vision is ready!")
-                self.driver.find_element_by_css_selector(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input").clear()
-                self.driver.find_element_by_css_selector(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input").send_keys(
-                    DTCT["Vision_Username"])
-                self.driver.find_element_by_css_selector(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input").clear()
-                self.driver.find_element_by_css_selector(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input").send_keys(
-                    DTCT["Vision_Password"])
-                self.driver.find_element_by_css_selector(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button").click()"""
-                # self.Wait("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.sc-kEYyzF.LcMkd > div > div > span.ant-alert-message",delay=5)
+                if self.Wait(
+                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input"):
+                    self.Fill(
+                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input",
+                        DTCT["Vision_Username"], click=False, Enter=False)
+                    self.Fill(
+                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
+                        DTCT["Vision_Password"], click=False)
+                    if self.Wait("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button"):
+                        self.Click(
+                            "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
             except TimeoutException:
                 print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
             try:
@@ -722,6 +737,11 @@ class Driver(object):
 
         else:
             print(getframeinfo(currentframe()).lineno, "No Such Type as " + Type)
+
+    # Clicking on target Element if displayed
+    def ClickIf(self, ID, delay=5, **kwargs):
+        if self.Wait(ID,delay=delay):
+            self.Click(ID)
 
     # Click on target Element type on target iframe
     def FrameS(self, frame, ROW_ID, Type="CSS", CLK="No_Text", fill="No_Text", **kwargs):
@@ -1473,6 +1493,27 @@ class Check(object):
             finally:
                 return flag
 
+        @staticmethod
+        def Support_File_Extract():
+            flag = False
+            try:
+                driver = Driver()
+                for i in DTCT.DP_Info.keys():
+                    driver.Click(f"gwt-debug-DevicesTree_Node_{i}")
+                    driver.ClickIf('//*[@title="Click to lock the device"]', delay=3)
+                    """if driver.Wait('//*[@title="Click to lock the device"]', Type="XPath", delay=3):	
+                        driver.Click('//*[@title="Click to lock the device"]', Type="Xpath")	"""
+                    driver.Click("gwt-debug-DeviceControlBar_Operations")
+                    while not driver.Wait("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support",delay=10):
+                        driver.Click("gwt-debug-DeviceControlBar_Operations")
+                    driver.Click("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support")
+                    flag = file_check()
+            except:
+                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                 driver.Close()
+                 return flag
+
     class DF(object):
         """
         DF Tests
@@ -1513,6 +1554,31 @@ class Check(object):
                 flag = True
             return flag
 
+        @staticmethod
+        def Support_File_Extract():
+            flag = False
+            try:
+                driver = Driver()
+                driver.DF_Configuration()
+                driver.Click("#gwt-debug-Configuration")
+                driver.Click("gwt-debug-TopicsNode_dfc-vision-support-content")
+                if not driver.Wait("gwt-debug-TopicsNode_dfc-vision-support-content", delay=3):
+                    driver.Click("gwt-debug-Configuration")
+                driver.Click("gwt-debug-TopicsNode_dfc-vision-support-content")
+                while not driver.Wait(
+                        "#dfc-vision-support > div > div > div:nth-child(1) > div > div > div:nth-child(1) > button"):
+                    driver.Click("gwt-debug-TopicsNode_dfc-vision-support-content")
+                driver.Click(
+                    "#dfc-vision-support > div > div > div:nth-child(1) > div > div > div:nth-child(1) > button")
+                driver.Click(
+                    "body > div.ReactModalPortal > div > div > div > div:nth-child(4) > div:nth-child(1) > div > div:nth-child(1) > button")
+                flag = file_check()
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                driver.Close()
+                return flag
+
     class Vision(object):
         """
         Vision Tests
@@ -1535,8 +1601,17 @@ class Check(object):
                     "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
                 driver.Click(
                     "#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(8) > div > div.NavItemContentstyle__StyledLabelContainer-ob11v-1.erVzTj")
-                driver.Click(
-                    "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details")
+                if driver.Wait(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]'):
+                    driver.Click(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]')
+                else:
+                    driver.Click("#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > div.vrm-report-list-title-wrapper > button")
+                    driver.Fill("#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--header.not-valid > div > div.form-content-header--content > div > div.wizard-form-content-header--input-wrapper > div.new-filter-wrapper > input", DTCT["Fill_Name"])
+                    driver.Click('//*[@data-debug-id="template_"]')
+                    driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
+                    driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
+                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-header.collapsed-header.with-error')
+                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-body.expanded > div > div > div.device-filter-search-bar-container > div > label')
+                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-footer > div > button.form-button.form-submit')
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.vrm-reports-item-expaneded-details-header > div > button")
                 driver.Displayed("div > div > div > div > div.loading-dots--dot-yellow")
@@ -1544,7 +1619,7 @@ class Check(object):
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.reports-logs > div > div > ul > li:nth-child(1) > li > a")
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
-                ZIP()
+                file_check()
                 # Turning the csv files to dataframes
                 with open("Traffic_Bandwidth.csv", "r") as csv:
                     TB = pd.read_csv(csv).astype("float64")
