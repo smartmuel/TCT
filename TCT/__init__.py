@@ -1528,72 +1528,72 @@ class Check(object):
                 try:
                     rmtree("Test_Report")
                 except:pass
-                try:
-                    # Downloading Report from Vision
-                    driver = Driver()
-                    driver.Click(
-                        "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
-                    driver.Click(
-                        "#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(8) > div > div.NavItemContentstyle__StyledLabelContainer-ob11v-1.erVzTj")
-                    driver.Click(
-                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details")
-                    driver.Click(
-                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.vrm-reports-item-expaneded-details-header > div > button")
-                    driver.Displayed("div > div > div > div > div.loading-dots--dot-yellow")
-                    driver.Click(
-                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.reports-logs > div > div > ul > li:nth-child(1) > li > a")
-                    driver.Click(
-                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
-                    ZIP()
-                    # Turning the csv files to dataframes
-                    with open("Traffic_Bandwidth.csv", "r") as csv:
-                        TB = pd.read_csv(csv).astype("float64")
-                    with open("Traffic_Rate.csv", "r") as csv:
-                        TR = pd.read_csv(csv).astype("float64")
-                except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-                    delete()
-                    return flag
-                finally:
-                    driver.Close()
-                try:
-                    if not os.path.isdir("Test_Report"):
-                        BP.CSV_Export()
-                    with open(os.path.join(cwd, "Test_Report", "Test_Report.csv"), "r") as file:
-                        data = file.readlines()
-                    # index list for slicing the Test_Report later
-                    index = []
-                    # indicators where to slice
-                    strings = ["6.1.2.3. Frames/s", "6.1.2.4. Megabits/s", "6.1.3. [interface=2]", "6.1.3.3. Frames/s",
-                               "6.1.3.4. Megabits/s", "6.2. "]
-                    for k in strings:
-                        for i, j in enumerate(data):
-                            if k in j:
-                                if "Frames/s" in j:
-                                    index.append(i + 2)
-                                else:
-                                    index.append(i)
-                                if "Megabits/s" in j:
-                                    index.append(i + 2)
-                                break
-                    # TR - Trafic Rate , TB - Trafic Bandwidth
-                    int1_TR = pd.read_csv(io.StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
-                                                                                                 regex=True).astype("float64")
-                    int1_TB = pd.read_csv(io.StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
-                                                                                                 regex=True).astype("float64")
-                    int2_TR = pd.read_csv(io.StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
-                                                                                  regex=True).astype("float64")
-                    int2_TB = pd.read_csv(io.StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
-                                                                                                 regex=True).astype("float64")
-                    if Legit_Only:
-                        Frames = TR[TR['inbound'] > TR['inbound'].max()*0.5]['inbound'].mean()/int1_TR[int1_TR['ethTxFrameRate'] > int1_TR['ethTxFrameRate'].max()*0.5]['ethTxFrameRate'].mean() > 0.95
-                        BW = TB[TB['inbound'] > TB['inbound'].max()*0.5]['inbound'].mean()/1000/int1_TB[int1_TB['ethTxFrameDataRate'] > int1_TB['ethTxFrameDataRate'].max()*0.5]['ethTxFrameDataRate'].mean() > 0.91
-                        flag = Frames and BW
-                except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
-                finally:
-                    delete()
-                    return flag
+            try:
+                # Downloading Report from Vision
+                driver = Driver()
+                driver.Click(
+                    "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
+                driver.Click(
+                    "#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(8) > div > div.NavItemContentstyle__StyledLabelContainer-ob11v-1.erVzTj")
+                driver.Click(
+                    "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details")
+                driver.Click(
+                    "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.vrm-reports-item-expaneded-details-header > div > button")
+                driver.Displayed("div > div > div > div > div.loading-dots--dot-yellow")
+                driver.Click(
+                    "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.reports-logs > div > div > ul > li:nth-child(1) > li > a")
+                driver.Click(
+                    "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
+                ZIP()
+                # Turning the csv files to dataframes
+                with open("Traffic_Bandwidth.csv", "r") as csv:
+                    TB = pd.read_csv(csv).astype("float64")
+                with open("Traffic_Rate.csv", "r") as csv:
+                    TR = pd.read_csv(csv).astype("float64")
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                delete()
+                return flag
+            finally:
+                driver.Close()
+            try:
+                if not os.path.isdir("Test_Report"):
+                    BP.CSV_Export()
+                with open(os.path.join(cwd, "Test_Report", "Test_Report.csv"), "r") as file:
+                    data = file.readlines()
+                # index list for slicing the Test_Report later
+                index = []
+                # indicators where to slice
+                strings = ["6.1.2.3. Frames/s", "6.1.2.4. Megabits/s", "6.1.3. [interface=2]", "6.1.3.3. Frames/s",
+                           "6.1.3.4. Megabits/s", "6.2. "]
+                for k in strings:
+                    for i, j in enumerate(data):
+                        if k in j:
+                            if "Frames/s" in j:
+                                index.append(i + 2)
+                            else:
+                                index.append(i)
+                            if "Megabits/s" in j:
+                                index.append(i + 2)
+                            break
+                # TR - Trafic Rate , TB - Trafic Bandwidth
+                int1_TR = pd.read_csv(io.StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
+                                                                                             regex=True).astype("float64")
+                int1_TB = pd.read_csv(io.StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
+                                                                                             regex=True).astype("float64")
+                int2_TR = pd.read_csv(io.StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
+                                                                              regex=True).astype("float64")
+                int2_TB = pd.read_csv(io.StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
+                                                                                             regex=True).astype("float64")
+                if Legit_Only:
+                    Frames = TR[TR['inbound'] > TR['inbound'].max()*0.5]['inbound'].mean()/int1_TR[int1_TR['ethTxFrameRate'] > int1_TR['ethTxFrameRate'].max()*0.5]['ethTxFrameRate'].mean() > 0.95
+                    BW = TB[TB['inbound'] > TB['inbound'].max()*0.5]['inbound'].mean()/1000/int1_TB[int1_TB['ethTxFrameDataRate'] > int1_TB['ethTxFrameDataRate'].max()*0.5]['ethTxFrameDataRate'].mean() > 0.91
+                    flag = Frames and BW
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            finally:
+                delete()
+                return flag
 
     class FD(object):
         """
