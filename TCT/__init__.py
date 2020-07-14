@@ -1405,11 +1405,8 @@ class Syslog(object):
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
         api = Vision_API()
-        if len(api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')) > 0:
-            com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections")
-            DTCT["OngoingProtections"] = len(com["OngoingProtections"])
-        else:
-            DTCT["OngoingProtections"] = 0
+        com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections",True)
+        DTCT["OngoingProtections"] = len(com["OngoingProtections"])
         DTCT.save()
 
 
@@ -1476,7 +1473,7 @@ class Check(object):
 
         @staticmethod
         def BDOS_Attacks():
-            flag = True
+            flag = False
             try:
                 for i in list(DTCT.DP_Info.values()):
                     telnet = Telnet(i)
@@ -1486,7 +1483,7 @@ class Check(object):
                         print(getframeinfo(currentframe()).lineno, com)
                         break
                 else:
-                    flag = False
+                    flag = True
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
             finally:

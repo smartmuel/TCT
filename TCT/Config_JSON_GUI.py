@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter import scrolledtext
 import json,time,pathlib,os
+from . import Config_JSON_CLI
 
 """path = pathlib.Path().absolute()
 DTCT_Path = ""
@@ -9,53 +10,26 @@ for r, d, f in os.walk(path):
 	if "Data_For_TCT.json" in f:
 		DTCT_Path = os.path.join(r, "Data_For_TCT.json")
 		break"""
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
+with open("Config_Info.json","r") as file:
+    Config_Json = json.load(file)
+
+# context managers for changing directory
+class cd(object):
+    def __init__(self, path):
+        os.chdir(path)
+    def __enter__(self):
+        return self
+    def __exit__(self, type, value, traceback):
+        os.chdir(cwd)
+
 try:
-    with open("Data_For_TCT.json", "r") as read_file:
-        DTCT1 = json.load(read_file)
+    with cd(Config_Json["Json_Folder_Path"]):
+        with open(Config_Json["Json_Name"], "r") as read_file:
+            DTCT1 = json.load(read_file)
 except:
     with open("Data_For_TCT.json", "a") as read_file:
-        TCT_json={
-    "BP_AppSim_Max_Number": 8,
-    "BP_IP": "1.1.1.1",
-    "BP_Password": "Password",
-    "BP_Reserve_Port_1": 0,
-    "BP_Reserve_Port_2": 1,
-    "BP_Reserve_Slot": 3,
-    "BP_Session_Max_Number": 8,
-    "BP_Test": "Test_Name",
-    "BP_Username": "Username",
-    "BP_Test_ID": "Don't Fill",
-    "DF_Password": "Password",
-    "DF_Username": "Username",
-    "DP_Password": "Password",
-    "DP_Ports": [
-        "T-1",
-        "14"
-    ],
-    "DP_Username": "Username",
-    "Driver_Path": "",
-    "FD_IP": "1.1.1.1",
-    "FD_Password": "Password",
-    "FD_Username": "Username",
-    "LOG_FILE": "syslog_AMS.log",
-    "MSSP_Dash_URL": "https://1.1.1.1/dashboard#/dashboard?r=5e579021d29d2001cc0593b8",
-    "MSSP_Password": "Password",
-    "MSSP_Username": "Username",
-    "SSH_IP": "1.1.1.1",
-    "SSH_Password": "Password",
-    "SSH_Username": "Username",
-    "Syslog_IP": "",
-    "Syslog_Start": [],
-    "Syslog_End": [],
-    "Vision_IP": "1.1.1.1",
-    "Vision_Password": "Password",
-    "Vision_Username": "Username",
-    "OngoingProtections": 0,
-    "Delay": 5
-}
-        json.dump(TCT_json, read_file, ensure_ascii=False, indent=4, sort_keys=True)
-        DTCT1 = TCT_json
+        json.dump(Config_JSON_CLI.Json.json_data, read_file, ensure_ascii=False, indent=4, sort_keys=True)
+        DTCT1 = Config_JSON_CLI.Json.json_data
 
 os.chdir(os.getcwd())
 
