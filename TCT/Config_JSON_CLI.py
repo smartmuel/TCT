@@ -38,7 +38,12 @@ class Json(object):
     "Vision_Username": "Username",
     "OngoingProtections": 0,
     "Delay": 5,
-    "Fill_Name": "Test"
+    "Fill_Name": "Test",
+    "BSN_IP": "10.170.8.50",
+    "BSN_Username": "admin",
+    "BSN_Password": "radware",
+    "BSN_Dirty_Policy": "Dirty-Traffic_AMS_1.5",
+    "BSN_Inboud_Policy": ""
     }
     try:
         with open("Config_Info.json","r") as file:
