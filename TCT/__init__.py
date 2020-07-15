@@ -1602,7 +1602,7 @@ class Check(object):
                     driver.Fill("#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--header.not-valid > div > div.form-content-header--content > div > div.wizard-form-content-header--input-wrapper > div.new-filter-wrapper > input", DTCT["Fill_Name"])
                     driver.Click('//*[@data-debug-id="template_"]')
                     driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
-                    if driver.Wait('#visionAppRoot > div > div > div.footer > button:nth-child(2)',delay=3)
+                    if driver.Wait('#visionAppRoot > div > div > div.footer > button:nth-child(2)',delay=3):
                         driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
                     else:
                         driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
