@@ -1605,6 +1605,8 @@ class Check(object):
                     driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-header.collapsed-header.with-error')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-body.expanded > div > div > div.device-filter-search-bar-container > div > label')
+                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(5) > div.tab-header.collapsed-header')
+                    driver.Click('#csv')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-footer > div > button.form-button.form-submit')
                     driver.Click(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]')
                 driver.Click(
@@ -1615,6 +1617,8 @@ class Check(object):
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
                 file_check()
+                driver.Click(f'//*[@data-debug-id="vrm-forensics-delete-item-button_{DTCT["Fill_Name"]}"]')
+                driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details.selected > div.vrm-reports-list-item-actions-container > div.vrm-forensics-delete-item-wrapper > div > div.vrm-forensics-delete-item-confirm')
                 # Turning the csv files to dataframes
                 with open("Traffic_Bandwidth.csv", "r") as csv:
                     TB = pd.read_csv(csv).astype("float64")
