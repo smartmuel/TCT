@@ -1724,8 +1724,7 @@ class Check(object):
             try:
                 response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
-                if len(response.json()["values"]) == Syslog.start:
-                    flag = True
+                flag = len(response.json()["values"]) == len(Syslog.start)
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
             finally:
