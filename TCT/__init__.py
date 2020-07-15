@@ -1325,6 +1325,34 @@ class Vision_API(object):
                 print(getframeinfo(currentframe()).lineno, response.text)
 
 
+class BSN_API(object):
+    """
+    BSN API Functions
+    """
+    def __init__(self, IP=DTCT["BSN_IP"]):
+        self.IP = IP
+        self.headers = {'content-type': 'application/json', 'Accept': 'application/json'}
+        url = f'https://{self.IP}:8443/api/v1/auth/login'
+        fill = {"user": DTCT["BSN_Username"], "password": DTCT["BSN_Password"]}
+        init_headers = {'content-type': 'application/json', 'Accept': '*/*'}
+        response = requests.post(url, data=json.dumps(fill), headers=init_headers, verify=False)
+        self.cookie = response.cookies
+
+    @staticmethod
+    def GET_Rules():
+        BSN = BSN_API()
+        url = f'https://{BSN.IP}:8443/api/v1/data/controller/applications/bigtap/policy[name="{DTCT["Dirty_Policy"]}"]/rule'
+        BSN.response = requests.get(url, headers=BSN.headers, cookies=BSN.cookie, verify=False).json()
+        return BSN
+
+    @staticmethod
+    def Del_Rules():
+        BSN = BSN_API.GET_Rules()
+        for i in BSN.response:
+            url = f'https://{BSN.IP}:8443/api/v1/data/controller/applications/bigtap/policy[name="{DTCT["Dirty_Policy"]}"]/rule[sequence={i["sequence"]}]'
+            requests.delete(url, headers=BSN.headers, cookies=BSN.cookie, verify=False)
+
+
 class SyslogUDPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         data = bytes.decode(self.request[0].strip())
