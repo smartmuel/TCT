@@ -1602,7 +1602,11 @@ class Check(object):
                     driver.Fill("#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--header.not-valid > div > div.form-content-header--content > div > div.wizard-form-content-header--input-wrapper > div.new-filter-wrapper > input", DTCT["Fill_Name"])
                     driver.Click('//*[@data-debug-id="template_"]')
                     driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
-                    driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
+                    if driver.Wait('#visionAppRoot > div > div > div.footer > button:nth-child(2)',delay=3)
+                        driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
+                    else:
+                        driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
+                        driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-header.collapsed-header.with-error')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-body.expanded > div > div > div.device-filter-search-bar-container > div > label')
                     driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(5) > div.tab-header.collapsed-header')
