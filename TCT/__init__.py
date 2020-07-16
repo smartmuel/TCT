@@ -216,22 +216,25 @@ def prefix_decorator(prefix=""):
             start = time.perf_counter()
             self.Vision()
             result = function(self, *args, **kwargs)
-            if prefix:
-                try:
-                    os.makedirs(os.path.join(self.path, self.Main_Name, self.Name))
-                except FileExistsError:
-                    pass
-                os.chdir(os.path.join(self.path, self.Main_Name, self.Name))
-                if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
-                    N = f"{self.Name}_{prefix}_{DP_index}.png"
-                else:
-                    N = f"{self.Name}_{prefix}.png"
-                # fix
-                self.driver.save_screenshot(N)
-                os.chdir(cwd)
-                if self.flag_change_size:
-                    self.Screen_Size()
-            print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
+            if self.allure == True:
+                self.allure = self.get_screenshot_as_png()
+            else:
+                if prefix:
+                    try:
+                        os.makedirs(os.path.join(self.path, self.Main_Name, self.Name))
+                    except FileExistsError:
+                        pass
+                    os.chdir(os.path.join(self.path, self.Main_Name, self.Name))
+                    if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
+                        N = f"{self.Name}_{prefix}_{DP_index}.png"
+                    else:
+                        N = f"{self.Name}_{prefix}.png"
+                    # fix
+                    self.driver.save_screenshot(N)
+                    os.chdir(cwd)
+                    if self.flag_change_size:
+                        self.Screen_Size()
+                print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
             return result
 
         return wrapper_test
@@ -241,7 +244,7 @@ def prefix_decorator(prefix=""):
 
 class Driver(object):
 
-    def __init__(self, Name="Test", url="",Headless_Flag = False):
+    def __init__(self, Name="Test", url="",allure = False,Headless_Flag = False):
         import chromedriver_autoinstaller
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
@@ -284,9 +287,7 @@ class Driver(object):
         finally:
             os.chdir(cwd)
 
-        self.Name = Name
-        self.Main_Name = Name.split("_")[0]
-        self.Password_Done = False
+        self.Name,self.Main_Name,self.Password_Done,self.allure = Name, Name.split("_")[0], False, allure
 
         if url == "":
             self.Vision()
@@ -848,15 +849,6 @@ class Driver(object):
             self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
             self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
             self.Click('body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect')
-        """self.FrameS("Traffic_Utilization",
-                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select",
-                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
-        self.FrameS("Traffic_Utilization",
-                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select",
-                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
-        self.FrameS("Traffic_Utilization",
-                    "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect",
-                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect")"""
 
     @prefix_decorator("DF_HA")
     def DF_High_Availity(self):
@@ -1622,7 +1614,7 @@ class Check(object):
 
             try:
                 # Downloading Report from Vision
-                driver = Driver()
+                driver = Driver(allure = True)
                 driver.Click(
                     "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
                 driver.Click(
@@ -1656,6 +1648,7 @@ class Check(object):
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.reports-logs > div > div > ul > li:nth-child(1) > li > a")
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
+                driver.DF_Traffic_Utillization()
                 if not file_check():
                     delete()
                     return flag
@@ -1670,9 +1663,9 @@ class Check(object):
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 delete()
-                return flag
-            finally:
                 driver.Close()
+                return flag, False
+
             try:
                 if not os.path.isdir("Test_Report"):
                     BP.CSV_Export()
@@ -1718,6 +1711,8 @@ class Check(object):
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 delete()
+                flag = (flag,driver.allure)
+                driver.Close()
                 return flag
 
     class FD(object):
