@@ -1,19 +1,16 @@
 # !/usr/bin/env python
 
-import os, pathlib, logging, socketserver, re, json, time, threading
+import os, pathlib, logging, socketserver, re, json, time, threading, paramiko, requests
 from sys import exc_info
 from shutil import rmtree
 from inspect import currentframe, getframeinfo
 from zipfile import ZipFile
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bps_restpy.bps_restpy_v1.bpsRest import BPS
+from io import StringIO
+from pandas import read_csv
 from . import Config_JSON_CLI as CLI
-
-try:
-    import requests
-    # pass
-except:
-    print(getframeinfo(currentframe()).lineno,
-          "requests is not installed, api functionality disabled")  # fix - add flag
-    # pass
 
 """cwd = current work directory"""
 cwd, debug_prints_flag, DP_index = os.getcwd(), False, "0"
@@ -105,8 +102,8 @@ class Configuration(object):
 
     def save(self):
         with cd(self.path):
-            self.json["Syslog_Start"] = list(Syslog.start)
-            self.json["Syslog_End"] = list(Syslog.end)
+            self.json["Syslog_Start"] = list(Check.start)
+            self.json["Syslog_End"] = list(Check.end)
             with open(self.json_file, 'w') as outfile:
                 json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
 
@@ -243,27 +240,12 @@ def prefix_decorator(prefix=""):
 
 
 class Driver(object):
-    try:
-        from selenium import webdriver
-        from selenium.webdriver.support.ui import WebDriverWait
-        from selenium.webdriver.support import expected_conditions as EC
-        from selenium.webdriver.common.by import By
-        from selenium.common.exceptions import TimeoutException
-        from selenium.webdriver.common.keys import Keys
-        from selenium.webdriver import ActionChains
-        from selenium.webdriver.chrome.options import Options
-    except:
-        print(getframeinfo(currentframe()).lineno, "Selenium library is missing")  # fix - add flag
-        # pass
-
-    try:
-        import chromedriver_autoinstaller
-        # pass
-    except:
-        print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
-        # pass
 
     def __init__(self, Name="Test", url="",Headless_Flag = False):
+        import chromedriver_autoinstaller
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+
         try:
             os.mkdir("ScreenShots")
         except FileExistsError:
@@ -357,7 +339,7 @@ class Driver(object):
                         DTCT["Vision_Password"], click=False)
                     self.ClickIf(
                         "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
-            except TimeoutException:
+            except:
                 print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
             try:
                 self.driver.find_element_by_css_selector(
@@ -383,26 +365,26 @@ class Driver(object):
                 except:
                     print(getframeinfo(currentframe()).lineno, "Fix")
             print(getframeinfo(currentframe()).lineno, "HOME is ready!")
-        except TimeoutException:
+        except:
             print(getframeinfo(currentframe()).lineno, "HOME took too much time!")
 
     # Driver enter MSSP
-    def MSSP(self):
+    def MSSP(self, delay = 5):
         self.Get(DTCT["MSSP_Dash_URL"])
-        delay = 5  # seconds
         try:
-            WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.NAME, 'username')))
+            self.Wait('username', Type="name", delay = delay)
             print(getframeinfo(currentframe()).lineno, "MSSP is ready!")
             self.driver.find_element_by_name("username").send_keys(DTCT["MSSP_Username"])
             self.driver.find_element_by_name("password").send_keys(DTCT["MSSP_Password"])
             self.driver.find_element_by_class_name("btnLogin").click()
-        except TimeoutException:
+        except:
             print(getframeinfo(currentframe()).lineno, "MSSP took too much time!")
         self.driver.fullscreen_window()
 
     # Fill Text
     def Fill(self, ID, Text, Type="auto", Enter=True, click=True, Arrow_Down_After=0, Arrow_Down_Before=0, delay=5,
              **kwargs):
+        from selenium.webdriver.common.keys import Keys
         def IFs(myElem, Enter, click, Arrow_Down_After, Arrow_Down_Before):
             if click:
                 myElem.click()
@@ -457,8 +439,7 @@ class Driver(object):
             for i in range(1000):
                 if "css" in Type:
                     try:
-                        myElem = WebDriverWait(self.driver, delay).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                        self.Wait(ID)
                         myElem = self.driver.find_element_by_css_selector(ID).click()
                         myElem.send_keys(Text)
                         if Enter:
@@ -471,7 +452,7 @@ class Driver(object):
 
                 elif "id" in Type:
                     try:
-                        myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                        self.Wait(ID)
                         myElem = self.driver.find_element_by_id(ID)
                         if Arrow_Down_Before:
                             myElem.send_keys(Keys.ARROW_DOWN)
@@ -491,8 +472,7 @@ class Driver(object):
 
                 else:
                     try:
-                        myElem = WebDriverWait(self.driver, delay).until(
-                            EC.presence_of_element_located((By.CLASS_NAME, ID)))
+                        self.Wait(ID)
                         myElem = self.driver.find_element_by_class_name(ID)
                         myElem.send_keys(Text)
                         myElem.send_keys(Keys.ENTER)
@@ -504,6 +484,7 @@ class Driver(object):
 
     # Wait for target Element type in current page
     def Wait(self, ID, Type="auto", delay=10, **kwargs):
+        from selenium.webdriver.common.by import By
         Type = Type.lower()
         ID = ID.strip()
         if "auto" in Type:
@@ -556,6 +537,13 @@ class Driver(object):
             except:
                 print(getframeinfo(currentframe()).lineno, "Wait False", ID)
                 return False
+        elif "name" in Type:
+            try:
+                myElem = WebDriverWait(self.driver, delay).until(
+                    EC.presence_of_element_located((By.Name, ID)))
+                return True
+            except:
+                print(getframeinfo(currentframe()).lineno, "Wait False", ID)
 
     # Clicking on target Element type in current page
     def Click(self, ID, Type="auto", wait="No", delay=5, tries=10, **kwargs):
@@ -626,8 +614,7 @@ class Driver(object):
         elif "css" in Type:
             for i in range(1000):
                 try:
-                    myElem = WebDriverWait(self.driver, delay).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ID)))
+                    self.Wait(ID)
                     self.driver.find_element_by_css_selector(ID).click()
                     # Fail = False
                     break
@@ -646,7 +633,7 @@ class Driver(object):
         elif "id" in Type:
             for i in range(1000):
                 try:
-                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.ID, ID)))
+                    self.Wait(ID)
                     self.driver.find_element_by_id(ID).click()
                     # Fail = False
                     break
@@ -699,8 +686,7 @@ class Driver(object):
         elif "class" in Type:
             for i in range(1000):
                 try:
-                    myElem = WebDriverWait(self.driver, delay).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, ID)))
+                    self.Wait(ID,Type="class")
                     self.driver.find_element_by_class_name(ID).click()
                     # Fail = False
                     break
@@ -715,7 +701,7 @@ class Driver(object):
         elif "xpath" in Type:
             for i in range(1000):
                 try:
-                    myElem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.XPATH, ID)))
+                    self.Wait(ID)
                     self.driver.find_element_by_xpath(ID).click()
                     # Fail = False
                     break
@@ -744,7 +730,7 @@ class Driver(object):
             print(getframeinfo(currentframe()).lineno, "No iframe")
         if Type == "CSS":
             try:
-                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ROW_ID)))
+                self.Wait(ROW_ID)
                 if fill != "No_Text":
                     self.Fill(ROW_ID, fill, Type)
                 if CLK:
@@ -753,20 +739,20 @@ class Driver(object):
                 print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
         elif Type == "CLASS":
             try:
-                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, ROW_ID)))
+                self.Wait(ROW_ID,type="class")
                 if fill != "No_Text":
                     self.Fill(ROW_ID, fill, Type)
                 if CLK:
-                    self.driver.find_element_by_id(By.CLASS_NAME).click()
+                    self.driver.find_element_by_class_name(ROW_ID).click()
             except:
                 print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
         elif Type == "ID":
             try:
-                myElem = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, ROW_ID)))
+                self.Wait(ROW_ID)
                 if fill != "No_Text":
                     self.Fill(ROW_ID, fill, Type)
                 if CLK:
-                    self.driver.find_element_by_id(By.ID).click()
+                    self.driver.find_element_by_id(ROW_ID).click()
             except:
                 print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
 
@@ -924,12 +910,6 @@ class Driver(object):
         self.Wait(
             "#bf2c5f9d-ccf3-47a9-bfb4-73dcf33681f5 > div.wrapper > div > div.area-chart__wrapper > canvas.chartjs-render-monitor",
             delay=15)
-        try:
-            action = ActionChains(self.driver)
-            action.move_to_element(self.driver.find_element_by_css_selector(
-                "#bf2c5f9d-ccf3-47a9-bfb4-73dcf33681f5 > div.wrapper > div > div.area-chart__wrapper > canvas:nth-child(2)"))
-        except:
-            pass
 
     @prefix_decorator("DF_Analytics")
     def DF_Analytics(self):
@@ -999,13 +979,7 @@ class Driver(object):
 
 
 class BP(object):
-    try:
-        from bps_restpy.bps_restpy_v1.bpsRest import BPS
-        # pass
-    except:
-        print(getframeinfo(currentframe()).lineno, "Breaking Point libraries are missing")  # fix - add flag
-        # pass
-
+    
     @staticmethod
     def Start(AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
               Session_MAX=DTCT["BP_Session_Max_Number"] + 1, Test_Name=DTCT["BP_Test"]):
@@ -1080,14 +1054,6 @@ class SSH(object):
     """
     Class for SSH
     """
-
-    try:
-        import paramiko
-        # pass
-    except:
-        print(getframeinfo(currentframe()).lineno,
-              "paramiko is not installed, ssh functionality disabled")  # fix - add flag
-        # pass
 
     def __init__(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
         """
@@ -1182,9 +1148,9 @@ class SSH(object):
 
 
 class Telnet(object):
-    import telnetlib
 
     def __init__(self, HOST, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
+        import telnetlib
         self.tn = telnetlib.Telnet()
         self.tn.open(HOST)
         self.tn.read_until(b"User:")
@@ -1376,39 +1342,25 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
     def match(self):
         if "ERROR" in self.data:
-            Syslog.error.add(self.data)
+            Check.error.add(self.data)
         elif "attack started" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(
                 self.data)
             for match in matches:
-                Syslog.start.add(match.group(0))
+                Check.start.add(match.group(0))
         elif "attack ended" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(self.data)
             for match in matches:
-                Syslog.end.add(match.group(0))
+                Check.end.add(match.group(0))
         elif "Imported successfully" in self.data:
-            Syslog.Import += 1
+            Check.Import += 1
         elif " term " in self.data:
-            Syslog.dp_term += 1
+            Check.dp_term += 1
 
 
 class Syslog(object):
-    # Count of Syslog Start Detection from DF
-    start = set()
-
-    # Count of Syslog End Detection from DF
-    end = set()
-
-    # Count of total Syslog errors
-    error = set()
-
-    # Count of total Imports to DP
-    Import = 0
-
-    # Count of total DP terminations
-    dp_term = 0
 
     def __init__(self):
         Telnet.DP_Syslog_ADD()
@@ -1454,15 +1406,22 @@ class Check(object):
     """
     Class For All The Tests
     """
-    from io import StringIO
-    try:
-        from pandas import read_csv
-        #import pandas as pd
-        # pass
-    except:
-        print(getframeinfo(currentframe()).lineno, "pandas is not installed")
-        # pass
+    
+    # Count of Syslog Start Detection from DF
+    start = set()
 
+    # Count of Syslog End Detection from DF
+    end = set()
+
+    # Count of total Syslog errors
+    error = set()
+
+    # Count of total Imports to DP
+    Import = 0
+
+    # Count of total DP terminations
+    dp_term = 0
+    
     class DP(object):
         """
         DP Tests
@@ -1584,7 +1543,7 @@ class Check(object):
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
             response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements', True)
-            if len(response1["BgpPeers"]) * (len(Syslog.start) + DTCT["OngoingProtections"]) <= len(
+            if len(response1["BgpPeers"]) * (len(Check.start) + DTCT["OngoingProtections"]) <= len(
                     response2["Announcements"]):
                 """peers = dict()
                 for i in response1["BgpPeers"]:
@@ -1765,7 +1724,7 @@ class Check(object):
             try:
                 response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
-                flag = len(response.json()["values"]) == len(Syslog.start)
+                flag = len(response.json()["values"]) == len(Check.start)
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
