@@ -1,22 +1,12 @@
 # !/usr/bin/env python
 
-import os, pathlib, logging, socketserver, telnetlib, re, json, time, platform, subprocess, threading, sys, socket,io
+import os, pathlib, logging, socketserver, re, json, time, threading
+from sys import exc_info
 from shutil import rmtree
 from inspect import currentframe, getframeinfo
 from zipfile import ZipFile
 from . import Config_JSON_CLI as CLI
-try:
-    from selenium import webdriver
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.common.by import By
-    from selenium.common.exceptions import TimeoutException
-    from selenium.webdriver.common.keys import Keys
-    from selenium.webdriver import ActionChains
-    from selenium.webdriver.chrome.options import Options
-except:
-    print(getframeinfo(currentframe()).lineno, "Selenium library is missing")  # fix - add flag
-    #pass
+
 try:
     import requests
     # pass
@@ -24,49 +14,26 @@ except:
     print(getframeinfo(currentframe()).lineno,
           "requests is not installed, api functionality disabled")  # fix - add flag
     # pass
-try:
-    from bps_restpy.bps_restpy_v1.bpsRest import *
-    # pass
-except:
-    print(getframeinfo(currentframe()).lineno, "Breaking Point libraries are missing")  # fix - add flag
-    # pass
-try:
-    import paramiko
-    # pass
-except:
-    print(getframeinfo(currentframe()).lineno,
-          "paramiko is not installed, ssh functionality disabled")  # fix - add flag
-    # pass
-try:
-    import chromedriver_autoinstaller
-    # pass
-except:
-    print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
-    # pass
-try:
-    import pandas as pd
-    #pass
-except:
-    print(getframeinfo(currentframe()).lineno, "pandas is not installed")
-    # pass
 
 """cwd = current work directory"""
-cwd = os.getcwd()
+cwd, debug_prints_flag, DP_index = os.getcwd(), False, "0"
 print(f"cwd: {cwd}")
-debug_prints_flag = False
-DP_index = "0"
 
-with open("Config_Info.json","r") as file:
+with open("Config_Info.json", "r") as file:
     Config_Json = json.load(file)
+
 
 # context managers for changing directory
 class cd(object):
     def __init__(self, path):
         os.chdir(path)
+
     def __enter__(self):
         return self
+
     def __exit__(self, type, value, traceback):
         os.chdir(cwd)
+
 
 #
 class Configuration(object):
@@ -80,7 +47,7 @@ class Configuration(object):
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
         try:
-            #DP_Info
+            # DP_Info
             url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
             fill_json = {"username": self.json["Vision_Username"], "password": self.json["Vision_Password"]}
             response = requests.post(url, verify=False, data=None, json=fill_json)
@@ -96,9 +63,9 @@ class Configuration(object):
             self.DF_Info_Update()
 
         except NameError:
-            print(getframeinfo(currentframe()).lineno,"Check if paramiko installed")
+            print(getframeinfo(currentframe()).lineno, "Check if paramiko installed")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
     def __setitem__(self, key, value):
         self.json[key] = value
@@ -124,7 +91,7 @@ class Configuration(object):
                         ssh.connect(i, port=22, username=self.json["DF_Username"], password=self.json["DF_Password"])
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 else:
                     continue
                 stdin, stdout, stderr = ssh.exec_command("ifconfig")
@@ -142,6 +109,7 @@ class Configuration(object):
             self.json["Syslog_End"] = list(Syslog.end)
             with open(self.json_file, 'w') as outfile:
                 json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
+
 
 # Reading the configuration from json
 try:
@@ -180,25 +148,30 @@ except:
                             break
                     DTCT = Configuration(DTCT_Path)
 
+
 def ping(host):
-    param = '-n' if platform.system().lower() == 'windows' else '-c'
+    from platform import system
+    param = '-n' if system().lower() == 'windows' else '-c'
     command = f"ping {param} 1 {host}"
     response = os.popen(command).read().lower()
     return 'unreachable' not in response and "100%" not in response
+
 
 def get_ip_address():
     """
     :return: the IP that can connect to 8.8.8.8
     """
+    import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
 
-def file_check(extract = True, delay=5):
+
+def file_check(extract=True, delay=5):
     start = time.perf_counter()
     flag = False
     try:
-        while time.perf_counter() - start < delay*60:
+        while time.perf_counter() - start < delay * 60:
             for file in os.listdir(os.getcwd()):
                 if file.endswith(".crdownload"):
                     time.sleep(0.5)
@@ -207,7 +180,7 @@ def file_check(extract = True, delay=5):
                 for file in os.listdir(os.getcwd()):
                     if file.endswith(".zip"):
                         if os.path.getsize(file) > 0:
-                            #time.sleep(3)
+                            # time.sleep(3)
                             if extract:
                                 with ZipFile(file, 'r') as zip:
                                     zip.extractall()
@@ -222,9 +195,11 @@ def file_check(extract = True, delay=5):
                 flag = True
                 break
     except:
-        print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
     finally:
         return flag
+
+
 """def ZIP():
     for file in os.listdir(os.getcwd()):
         if file.endswith(".zip"):
@@ -236,6 +211,7 @@ def file_check(extract = True, delay=5):
         time.sleep(0.5)
         ZIP()"""
 
+
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
     def decorator_test(function):
@@ -245,10 +221,10 @@ def prefix_decorator(prefix=""):
             result = function(self, *args, **kwargs)
             if prefix:
                 try:
-                    os.makedirs(os.path.join(Driver.path, self.Main_Name, self.Name))
+                    os.makedirs(os.path.join(self.path, self.Main_Name, self.Name))
                 except FileExistsError:
                     pass
-                os.chdir(os.path.join(Driver.path, self.Main_Name, self.Name))
+                os.chdir(os.path.join(self.path, self.Main_Name, self.Name))
                 if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
                     N = f"{self.Name}_{prefix}_{DP_index}.png"
                 else:
@@ -267,16 +243,32 @@ def prefix_decorator(prefix=""):
 
 
 class Driver(object):
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.common.by import By
+        from selenium.common.exceptions import TimeoutException
+        from selenium.webdriver.common.keys import Keys
+        from selenium.webdriver import ActionChains
+        from selenium.webdriver.chrome.options import Options
+    except:
+        print(getframeinfo(currentframe()).lineno, "Selenium library is missing")  # fix - add flag
+        # pass
 
     try:
-        os.mkdir("ScreenShots")
-    except FileExistsError:
-        pass
-    path = os.path.join(cwd, "ScreenShots")
-    flag_change_size = False
+        import chromedriver_autoinstaller
+        # pass
+    except:
+        print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
+        # pass
 
     def __init__(self, Name="Test", url=""):
-        self.start = time.perf_counter()
+        try:
+            os.mkdir("ScreenShots")
+        except FileExistsError:
+            pass
+        self.path, self.flag_change_size, self.start = os.path.join(cwd, "ScreenShots"), False, time.perf_counter()
 
         # Opening Chrome Driver
         options = Options()
@@ -348,21 +340,22 @@ class Driver(object):
         DTCT.save()
 
     # Driver enter Vision
-    def Vision(self, delay = 5):
+    def Vision(self, delay=5):
         self.Get(f"https://{DTCT['Vision_IP']}/")
         if time.perf_counter() - self.start > 1200:
             self.Password_Done = False
         if not self.Password_Done:
             try:
                 if self.Wait(
-                    "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input"):
+                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input"):
                     self.Fill(
                         "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input",
                         DTCT["Vision_Username"], click=False, Enter=False)
                     self.Fill(
                         "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
                         DTCT["Vision_Password"], click=False)
-                    self.ClickIf("#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
+                    self.ClickIf(
+                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
             except TimeoutException:
                 print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
             try:
@@ -507,6 +500,7 @@ class Driver(object):
                     except:
                         print(getframeinfo(currentframe()).lineno, "didn't click" + str(i))
                         # Fail = True
+
     # Wait for target Element type in current page
     def Wait(self, ID, Type="auto", delay=10, **kwargs):
         Type = Type.lower()
@@ -563,7 +557,7 @@ class Driver(object):
                 return False
 
     # Clicking on target Element type in current page
-    def Click(self, ID, Type="auto", wait="No", delay=5, tries = 10, **kwargs):
+    def Click(self, ID, Type="auto", wait="No", delay=5, tries=10, **kwargs):
         ID = ID.strip()
         Type = Type.lower()
         if "auto" in Type:
@@ -737,9 +731,9 @@ class Driver(object):
             print(getframeinfo(currentframe()).lineno, "No Such Type as " + Type)
 
     # Clicking on target Element if displayed
-    def ClickIf(self, ID, delay=5, tries = 1,**kwargs):
-        if self.Wait(ID, delay = delay):
-            self.Click(ID, tries = tries)
+    def ClickIf(self, ID, delay=5, tries=1, **kwargs):
+        if self.Wait(ID, delay=delay):
+            self.Click(ID, tries=tries)
 
     # Click on target Element type on target iframe
     def FrameS(self, frame, ROW_ID, Type="CSS", CLK="No_Text", fill="No_Text", **kwargs):
@@ -1004,6 +998,12 @@ class Driver(object):
 
 
 class BP(object):
+    try:
+        from bps_restpy.bps_restpy_v1.bpsRest import BPS
+        # pass
+    except:
+        print(getframeinfo(currentframe()).lineno, "Breaking Point libraries are missing")  # fix - add flag
+        # pass
 
     @staticmethod
     def Start(AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
@@ -1055,12 +1055,12 @@ class BP(object):
             if csv:
                 bps.exportTestReport(DTCT["BP_Test_ID"], "Test_Report.csv", "Test_Report")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
         finally:
             try:
                 bps.logout()
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
     @staticmethod
     def CSV_Export():
@@ -1070,7 +1070,7 @@ class BP(object):
             bps.login()
             bps.exportTestReport(DTCT["BP_Test_ID"], "Test_Report.csv", "Test_Report")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
         finally:
             bps.logout()
 
@@ -1079,6 +1079,14 @@ class SSH(object):
     """
     Class for SSH
     """
+
+    try:
+        import paramiko
+        # pass
+    except:
+        print(getframeinfo(currentframe()).lineno,
+              "paramiko is not installed, ssh functionality disabled")  # fix - add flag
+        # pass
 
     def __init__(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
         """
@@ -1173,6 +1181,8 @@ class SSH(object):
 
 
 class Telnet(object):
+    import telnetlib
+
     def __init__(self, HOST, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
         self.tn = telnetlib.Telnet()
         self.tn.open(HOST)
@@ -1196,7 +1206,7 @@ class Telnet(object):
         for i in DTCT.DP_Info.values():
             telnet = Telnet(i, user=DTCT["DP_Username"], password=DTCT["DP_Password"])
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
-            output = telnet.Command(f"manage syslog destination add {ip}",True)
+            output = telnet.Command(f"manage syslog destination add {ip}", True)
             if debug_prints_flag:
                 print(getframeinfo(currentframe()).lineno, output)
 
@@ -1205,7 +1215,7 @@ class Telnet(object):
         for i in DTCT.DP_Info.values():
             telnet = Telnet(i, user=DTCT["DP_Username"], password=DTCT["DP_Password"])
             ip = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
-            output = telnet.Command(f"manage syslog destination del {ip}",True)
+            output = telnet.Command(f"manage syslog destination del {ip}", True)
             if debug_prints_flag:
                 print(getframeinfo(currentframe()).lineno, output)
 
@@ -1329,6 +1339,7 @@ class BSN_API(object):
     """
     BSN API Functions
     """
+
     def __init__(self, IP=DTCT["BSN_IP"]):
         self.IP = IP
         self.headers = {'content-type': 'application/json', 'Accept': 'application/json'}
@@ -1427,13 +1438,13 @@ class Syslog(object):
             Telnet.DP_Syslog_DELETE()
             Vision_API.Syslog_DELETE()
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
         try:
             self.server.shutdown()
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
         api = Vision_API()
-        com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections",True)
+        com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections", True)
         DTCT["OngoingProtections"] = len(com["OngoingProtections"])
         DTCT.save()
 
@@ -1442,6 +1453,14 @@ class Check(object):
     """
     Class For All The Tests
     """
+    import io
+    try:
+        import pandas as pd
+        # pass
+    except:
+        print(getframeinfo(currentframe()).lineno, "pandas is not installed")
+        # pass
+
     class DP(object):
         """
         DP Tests
@@ -1477,7 +1496,7 @@ class Check(object):
                                 print(getframeinfo(currentframe()).lineno, com)
                                 return False
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1495,7 +1514,7 @@ class Check(object):
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1513,7 +1532,7 @@ class Check(object):
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1526,15 +1545,15 @@ class Check(object):
                     driver.Click(f"gwt-debug-DevicesTree_Node_{i}")
                     driver.ClickIf('//*[@title="Click to lock the device"]', delay=3)
                     driver.Click("gwt-debug-DeviceControlBar_Operations")
-                    while not driver.Wait("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support",delay=10):
+                    while not driver.Wait("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support", delay=10):
                         driver.Click("gwt-debug-DeviceControlBar_Operations")
                     driver.Click("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support")
                     flag = file_check()
             except:
-                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
-                 driver.Close()
-                 return flag
+                driver.Close()
+                return flag
 
     class DF(object):
         """
@@ -1553,7 +1572,7 @@ class Check(object):
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1562,8 +1581,9 @@ class Check(object):
             flag = False
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
-            response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements',True)
-            if len(response1["BgpPeers"]) * (len(Syslog.start) + DTCT["OngoingProtections"])  <= len(response2["Announcements"]):
+            response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements', True)
+            if len(response1["BgpPeers"]) * (len(Syslog.start) + DTCT["OngoingProtections"]) <= len(
+                    response2["Announcements"]):
                 """peers = dict()
                 for i in response1["BgpPeers"]:
                     try:
@@ -1596,7 +1616,7 @@ class Check(object):
                     "body > div.ReactModalPortal > div > div > div > div:nth-child(4) > div:nth-child(1) > div > div:nth-child(1) > button")
                 flag = file_check(extract=False)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 driver.Close()
                 return flag
@@ -1609,13 +1629,16 @@ class Check(object):
         @staticmethod
         def Graph_Comparison_BP(Legit_Only=False):
             flag = False
+
             def delete():
                 for file in os.listdir(os.getcwd()):
                     if file.endswith(".zip") or file.endswith(".crdownload") or file.endswith(".csv"):
                         os.remove(file)
                 try:
                     rmtree("Test_Report")
-                except:pass
+                except:
+                    pass
+
             try:
                 # Downloading Report from Vision
                 driver = Driver()
@@ -1626,17 +1649,24 @@ class Check(object):
                 if driver.Wait(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]'):
                     driver.Click(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]')
                 else:
-                    driver.Click("#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > div.vrm-report-list-title-wrapper > button")
-                    driver.Fill("#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--header.not-valid > div > div.form-content-header--content > div > div.wizard-form-content-header--input-wrapper > div.new-filter-wrapper > input", DTCT["Fill_Name"])
+                    driver.Click(
+                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > div.vrm-report-list-title-wrapper > button")
+                    driver.Fill(
+                        "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--header.not-valid > div > div.form-content-header--content > div > div.wizard-form-content-header--input-wrapper > div.new-filter-wrapper > input",
+                        DTCT["Fill_Name"])
                     driver.Click('//*[@data-debug-id="template_"]')
                     time.sleep(1)
                     driver.Click('//*[@data-debug-id="template_DefenseFlow Analytics Dashboard"]')
                     driver.Click('#visionAppRoot > div > div > div.footer > button:nth-child(2)')
-                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-header.collapsed-header.with-error')
-                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-body.expanded > div > div > div.device-filter-search-bar-container > div > label')
-                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(5) > div.tab-header.collapsed-header')
+                    driver.Click(
+                        '#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-header.collapsed-header.with-error')
+                    driver.Click(
+                        '#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(1) > div.tab-body.expanded > div > div > div.device-filter-search-bar-container > div > label')
+                    driver.Click(
+                        '#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-content > div.wizard-form-content--main > div > div:nth-child(5) > div.tab-header.collapsed-header')
                     driver.Click('#csv')
-                    driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-footer > div > button.form-button.form-submit')
+                    driver.Click(
+                        '#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > div > div.wizard-form-footer > div > button.form-button.form-submit')
                     driver.Click(f'//*[@data-debug-id="vrm-forensics-views-list-item-expand_{DTCT["Fill_Name"]}"]')
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.vrm-reports-item-expaneded-details-header > div > button")
@@ -1649,14 +1679,15 @@ class Check(object):
                     delete()
                     return flag
                 driver.Click(f'//*[@data-debug-id="vrm-forensics-delete-item-button_{DTCT["Fill_Name"]}"]')
-                driver.Click('#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details.selected > div.vrm-reports-list-item-actions-container > div.vrm-forensics-delete-item-wrapper > div > div.vrm-forensics-delete-item-confirm')
+                driver.Click(
+                    '#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details.selected > div.vrm-reports-list-item-actions-container > div.vrm-forensics-delete-item-wrapper > div > div.vrm-forensics-delete-item-confirm')
                 # Turning the csv files to dataframes
                 with open("Traffic_Bandwidth.csv", "r") as csv:
                     TB = pd.read_csv(csv).astype("float64")
                 with open("Traffic_Rate.csv", "r") as csv:
                     TR = pd.read_csv(csv).astype("float64")
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 delete()
                 return flag
             finally:
@@ -1683,19 +1714,27 @@ class Check(object):
                             break
                 # TR - Trafic Rate , TB - Trafic Bandwidth
                 int1_TR = pd.read_csv(io.StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype("float64")
+                                                                                             regex=True).astype(
+                    "float64")
                 int1_TB = pd.read_csv(io.StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype("float64")
+                                                                                             regex=True).astype(
+                    "float64")
                 int2_TR = pd.read_csv(io.StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
-                                                                              regex=True).astype("float64")
+                                                                                             regex=True).astype(
+                    "float64")
                 int2_TB = pd.read_csv(io.StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype("float64")
+                                                                                             regex=True).astype(
+                    "float64")
                 if Legit_Only:
-                    Frames = TR[TR['inbound'] > TR['inbound'].max()*0.5]['inbound'].mean()/int1_TR[int1_TR['ethTxFrameRate'] > int1_TR['ethTxFrameRate'].max()*0.5]['ethTxFrameRate'].mean() > 0.95
-                    BW = TB[TB['inbound'] > TB['inbound'].max()*0.5]['inbound'].mean()/1000/int1_TB[int1_TB['ethTxFrameDataRate'] > int1_TB['ethTxFrameDataRate'].max()*0.5]['ethTxFrameDataRate'].mean() > 0.91
+                    Frames = TR[TR['inbound'] > TR['inbound'].max() * 0.5]['inbound'].mean() / \
+                             int1_TR[int1_TR['ethTxFrameRate'] > int1_TR['ethTxFrameRate'].max() * 0.5][
+                                 'ethTxFrameRate'].mean() > 0.95
+                    BW = TB[TB['inbound'] > TB['inbound'].max() * 0.5]['inbound'].mean() / 1000 / \
+                         int1_TB[int1_TB['ethTxFrameDataRate'] > int1_TB['ethTxFrameDataRate'].max() * 0.5][
+                             'ethTxFrameDataRate'].mean() > 0.91
                     flag = Frames and BW
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 delete()
                 return flag
@@ -1714,7 +1753,7 @@ class Check(object):
                 if len(response.json()["values"]) == 0:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1726,7 +1765,7 @@ class Check(object):
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
                 flag = len(response.json()["values"]) == len(Syslog.start)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
 
@@ -1742,7 +1781,7 @@ class Check(object):
         """
 
         @staticmethod
-        def Ping_All_Components(Fail_Time=5, MSSP = True):
+        def Ping_All_Components(Fail_Time=5, MSSP=True):
             start = time.perf_counter()
             flag = True
             try:
@@ -1762,6 +1801,6 @@ class Check(object):
                         break
                     time.sleep(1)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", sys.exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 return flag
