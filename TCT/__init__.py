@@ -757,6 +757,22 @@ class Driver(object):
                 print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
 
         self.driver.switch_to.default_content()
+    class iframe(object):
+        def __init__(self, driver,frame,delay=10):
+            try:
+                self.driver = driver
+                WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, type, value, traceback):
+            try:
+                self.driver.switch_to.default_content()
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
     def Displayed(self, ID):
         ID = ID.strip()
@@ -828,7 +844,11 @@ class Driver(object):
         self.Click("gwt-debug-Security Monitoring")
         self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
         self.Click("#gwt-debug-TopicsNode_traffic-utilization-report-content", "CSS")
-        self.FrameS("Traffic_Utilization",
+        with self.iframe(self.driver,"Traffic_Utilization"):
+            self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
+            self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
+            self.Click('body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect')
+        """self.FrameS("Traffic_Utilization",
                     "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select",
                     CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
         self.FrameS("Traffic_Utilization",
@@ -836,7 +856,7 @@ class Driver(object):
                     CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
         self.FrameS("Traffic_Utilization",
                     "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect",
-                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect")
+                    CLK="body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect")"""
 
     @prefix_decorator("DF_HA")
     def DF_High_Availity(self):
@@ -879,7 +899,7 @@ class Driver(object):
             self.One_DP_Traffic_Utillization()
             self.One_DP_Current_Attack_Table()
 
-    @prefix_decorator(f"DP_Traffic")
+    @prefix_decorator("DP_Traffic")
     def One_DP_Traffic_Utillization(self):
         self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
         self.Click('gwt-debug-Security Monitoring')
@@ -893,7 +913,7 @@ class Driver(object):
         except:
             pass
 
-    @prefix_decorator(f"DP_Current_Attack")
+    @prefix_decorator("DP_Current_Attack")
     def One_DP_Current_Attack_Table(self):
         self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
         self.Click('gwt-debug-Security Monitoring')
