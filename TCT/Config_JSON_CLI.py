@@ -39,10 +39,10 @@ class Json(object):
     "OngoingProtections": 0,
     "Delay": 5,
     "Fill_Name": "Test",
-    "BSN_IP": "10.170.8.50",
-    "BSN_Username": "admin",
-    "BSN_Password": "radware",
-    "BSN_Dirty_Policy": "Dirty-Traffic_AMS_1.5",
+    "BSN_IP": "1.1.1.1",
+    "BSN_Username": "Username",
+    "BSN_Password": "Password",
+    "BSN_Dirty_Policy": "",
     "BSN_Inboud_Policy": ""
     }
     try:
