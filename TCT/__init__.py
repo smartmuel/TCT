@@ -263,7 +263,7 @@ class Driver(object):
         print(getframeinfo(currentframe()).lineno, "chromedriver_autoinstaller is not installed")
         # pass
 
-    def __init__(self, Name="Test", url=""):
+    def __init__(self, Name="Test", url="",Headless_Flag = False):
         try:
             os.mkdir("ScreenShots")
         except FileExistsError:
@@ -272,6 +272,7 @@ class Driver(object):
 
         # Opening Chrome Driver
         options = Options()
+        options.headless = Headless_Flag
         options.add_experimental_option("prefs", {
             "download.default_directory": rf"{cwd}",
             "download.prompt_for_download": False,
