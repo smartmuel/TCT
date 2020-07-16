@@ -1453,9 +1453,10 @@ class Check(object):
     """
     Class For All The Tests
     """
-    import io
+    from io import StringIO
     try:
-        import pandas as pd
+        from pandas import read_csv
+        #import pandas as pd
         # pass
     except:
         print(getframeinfo(currentframe()).lineno, "pandas is not installed")
@@ -1683,9 +1684,9 @@ class Check(object):
                     '#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-main-details.selected > div.vrm-reports-list-item-actions-container > div.vrm-forensics-delete-item-wrapper > div > div.vrm-forensics-delete-item-confirm')
                 # Turning the csv files to dataframes
                 with open("Traffic_Bandwidth.csv", "r") as csv:
-                    TB = pd.read_csv(csv).astype("float64")
+                    TB = read_csv(csv).astype("float64")
                 with open("Traffic_Rate.csv", "r") as csv:
-                    TR = pd.read_csv(csv).astype("float64")
+                    TR = read_csv(csv).astype("float64")
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 delete()
@@ -1713,18 +1714,18 @@ class Check(object):
                                 index.append(i + 2)
                             break
                 # TR - Trafic Rate , TB - Trafic Bandwidth
-                int1_TR = pd.read_csv(io.StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
+                int1_TR = read_csv(StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
                                                                                              regex=True).astype(
                     "float64")
-                int1_TB = pd.read_csv(io.StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
+                int1_TB = read_csv(StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
                                                                                              regex=True).astype(
                     "float64")
-                int2_TR = pd.read_csv(io.StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype(
-                    "float64")
-                int2_TB = pd.read_csv(io.StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype(
-                    "float64")
+                #int2_TR = read_csv(StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
+                #                                                                            regex=True).astype(
+                #   "float64")
+                #int2_TB = read_csv(StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
+                #                                                                            regex=True).astype(
+                #   "float64")
                 if Legit_Only:
                     Frames = TR[TR['inbound'] > TR['inbound'].max() * 0.5]['inbound'].mean() / \
                              int1_TR[int1_TR['ethTxFrameRate'] > int1_TR['ethTxFrameRate'].max() * 0.5][
