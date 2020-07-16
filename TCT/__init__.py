@@ -217,7 +217,7 @@ def prefix_decorator(prefix=""):
             self.Vision()
             result = function(self, *args, **kwargs)
             if self.allure == True:
-                self.allure = self.get_screenshot_as_png()
+                self.allure = self.driver.get_screenshot_as_png()
             else:
                 if prefix:
                     try:
@@ -545,6 +545,8 @@ class Driver(object):
                 return True
             except:
                 print(getframeinfo(currentframe()).lineno, "Wait False", ID)
+        """if self.allure:
+            self.driver.get_screenshot_as_png()"""
 
     # Clicking on target Element type in current page
     def Click(self, ID, Type="auto", wait="No", delay=5, tries=10, **kwargs):
