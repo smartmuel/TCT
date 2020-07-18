@@ -216,8 +216,8 @@ def prefix_decorator(prefix=""):
             start = time.perf_counter()
             self.Vision()
             result = function(self, *args, **kwargs)
-            if self.allure == True:
-                self.allure = self.driver.get_screenshot_as_png()
+            if self.allure:
+                self.image = self.driver.get_screenshot_as_png()
             else:
                 if prefix:
                     try:
@@ -340,7 +340,7 @@ class Driver(object):
         finally:
             os.chdir(cwd)
 
-        self.Name,self.Main_Name,self.Password_Done,self.allure = Name, Name.split("_")[0], False, allure
+        self.Name,self.Main_Name,self.Password_Done,self.allure,self.image = Name, Name.split("_")[0], False, allure, None
 
         if url == "":
             self.Vision()
