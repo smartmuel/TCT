@@ -30,11 +30,8 @@ class cd(object):
 
     def __exit__(self, type, value, traceback):
         os.chdir(cwd)
-
+# the IP that can connect to 8.8.8.8
 def get_ip_address():
-    """
-    :return: the IP that can connect to 8.8.8.8
-    """
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
@@ -47,13 +44,13 @@ def ping(host):
     response = os.popen(command).read().lower()
     return 'unreachable' not in response and "100%" not in response
 
-#
+# json read class
 class Configuration(object):
     def __init__(self, json_file):
         self.path, self.DP_Info, self.DF_Info, self.DF_HA, self.json_file = os.getcwd(), {}, {}, False, json_file
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
-        DTCT["Syslog_IP"] = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
+        self.json["Syslog_IP"] = self.json["Syslog_IP"] if self.json["Syslog_IP"] else get_ip_address()
         print("json file in:", os.getcwd())
         try:
             # DP_Info
