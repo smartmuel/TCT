@@ -31,17 +31,29 @@ class cd(object):
     def __exit__(self, type, value, traceback):
         os.chdir(cwd)
 
+def get_ip_address():
+    """
+    :return: the IP that can connect to 8.8.8.8
+    """
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
+def ping(host):
+    from platform import system
+    param = '-n' if system().lower() == 'windows' else '-c'
+    command = f"ping {param} 1 {host}"
+    response = os.popen(command).read().lower()
+    return 'unreachable' not in response and "100%" not in response
 
 #
 class Configuration(object):
     def __init__(self, json_file):
-        self.path = os.getcwd()
-        self.DP_Info = dict()
-        self.DF_Info = dict()
-        self.DF_HA = False
-        self.json_file = json_file
+        self.path, self.DP_Info, self.DF_Info, self.DF_HA, self.json_file = os.getcwd(), {}, {}, False, json_file
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
+        DTCT["Syslog_IP"] = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
         print("json file in:", os.getcwd())
         try:
             # DP_Info
@@ -145,25 +157,7 @@ except:
                             break
                     DTCT = Configuration(DTCT_Path)
 
-
-def ping(host):
-    from platform import system
-    param = '-n' if system().lower() == 'windows' else '-c'
-    command = f"ping {param} 1 {host}"
-    response = os.popen(command).read().lower()
-    return 'unreachable' not in response and "100%" not in response
-
-
-def get_ip_address():
-    """
-    :return: the IP that can connect to 8.8.8.8
-    """
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    return s.getsockname()[0]
-
-
+#Check if File Downloaded and if it a zip there is an extraction flag
 def file_check(extract=True, delay=5):
     start = time.perf_counter()
     flag = False
@@ -195,56 +189,6 @@ def file_check(extract=True, delay=5):
         print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
     finally:
         return flag
-
-
-"""def ZIP():
-    for file in os.listdir(os.getcwd()):
-        if file.endswith(".zip"):
-            file_name = file
-            with ZipFile(file_name, 'r') as zip:
-                zip.extractall()
-                break
-    else:
-        time.sleep(0.5)
-        ZIP()"""
-
-
-# Decorator for ScreenShots and more
-def prefix_decorator(prefix=""):
-    def decorator_test(function):
-        def wrapper_test(self, *args, **kwargs):
-            start = time.perf_counter()
-            self.Vision()
-            result = function(self, *args, **kwargs)
-            if self.allure:
-                self.image = self.driver.get_screenshot_as_png()
-                if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
-                    self.Name = f"{prefix}_{DP_index}"
-                else:
-                    self.Name = prefix
-            else:
-                if prefix:
-                    try:
-                        os.makedirs(os.path.join(self.path, self.Main_Name, self.Name))
-                    except FileExistsError:
-                        pass
-                    os.chdir(os.path.join(self.path, self.Main_Name, self.Name))
-                    if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
-                        N = f"{self.Name}_{prefix}_{DP_index}.png"
-                    else:
-                        N = f"{self.Name}_{prefix}.png"
-                    # fix
-                    self.driver.save_screenshot(N)
-                    os.chdir(cwd)
-            if self.flag_change_size:
-                self.Screen_Size()
-            print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
-            return result
-
-        return wrapper_test
-
-    return decorator_test
-
 
 # Context Managers Class
 class CM(object):
@@ -305,6 +249,41 @@ class CM(object):
             except:
                 pass  # silenced
 
+# Decorator for ScreenShots and more
+def prefix_decorator(prefix=""):
+    def decorator_test(function):
+        def wrapper_test(self, *args, **kwargs):
+            start = time.perf_counter()
+            self.Vision()
+            result = function(self, *args, **kwargs)
+            if self.allure:
+                self.image = self.driver.get_screenshot_as_png()
+                if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
+                    self.Name = f"{prefix}_{DP_index}"
+                else:
+                    self.Name = prefix
+            else:
+                if prefix:
+                    try:
+                        os.makedirs(os.path.join(self.path, self.Main_Name, self.Name))
+                    except FileExistsError:
+                        pass
+                    os.chdir(os.path.join(self.path, self.Main_Name, self.Name))
+                    if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
+                        N = f"{self.Name}_{prefix}_{DP_index}.png"
+                    else:
+                        N = f"{self.Name}_{prefix}.png"
+                    # fix
+                    self.driver.save_screenshot(N)
+                    os.chdir(cwd)
+            if self.flag_change_size:
+                self.Screen_Size()
+            print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
+            return result
+
+        return wrapper_test
+
+    return decorator_test
 
 class Driver(object):
 
@@ -1399,14 +1378,12 @@ class Syslog(object):
     # Setting the Syslog server
     def Server(self):
         try:
-            HOST = DTCT["Syslog_IP"] if DTCT["Syslog_IP"] else get_ip_address()
             try:
                 os.remove("syslog_AMS.log")
-            except:
-                pass
+            except:pass#Silenced
             logging.basicConfig(level=logging.INFO, format='%(message)s', datefmt='', filename=DTCT["LOG_FILE"],
                                 filemode='a')
-            self.server = socketserver.UDPServer((HOST, 514), SyslogUDPHandler)
+            self.server = socketserver.UDPServer((DTCT["Syslog_IP"], 514), SyslogUDPHandler)
             self.server.serve_forever(poll_interval=0.5)
         except (IOError, SystemExit):
             raise
