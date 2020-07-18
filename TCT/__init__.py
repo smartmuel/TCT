@@ -330,10 +330,9 @@ class Driver(object):
         self.Name, self.Main_Name, self.Password_Done, self.allure, self.image = Name, Name.split("_")[
             0], False, allure, None
 
-        if url == "":
-            self.Vision()
-        if url != "":
-            self.Get(url)
+        if self.base_resolution != 100:
+            self.Screen_Size()
+        self.Get(url) if url else self.Vision()
 
     def __call__(self):
         return self.driver
