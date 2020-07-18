@@ -13,7 +13,7 @@ from pandas import read_csv
 from . import Config_JSON_CLI as CLI
 
 """cwd = current work directory"""
-cwd, debug_prints_flag, DP_index = os.getcwd(), False, "0"
+cwd, DP_index, debug_prints_flag = os.getcwd(), "0", False
 print(f"cwd: {cwd}")
 
 with open("Config_Info.json", "r") as file:
@@ -35,7 +35,6 @@ class cd(object):
 #
 class Configuration(object):
     def __init__(self, json_file):
-        print("json file in:", os.getcwd())
         self.path = os.getcwd()
         self.DP_Info = dict()
         self.DF_Info = dict()
@@ -43,6 +42,7 @@ class Configuration(object):
         self.json_file = json_file
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
+        print("json file in:", os.getcwd())
         try:
             # DP_Info
             url = f"https://{self.json['Vision_IP']}/mgmt/system/user/login"
@@ -240,6 +240,47 @@ def prefix_decorator(prefix=""):
         return wrapper_test
 
     return decorator_test
+
+# Context Managers Class
+class CM(object):
+
+    # Driver Context Manager
+    class Chrome(object):
+        def __init__(self, url="", allure=False, Name="Test"):
+            self.driver = Driver()
+        def __enter__(self):
+            return self.driver
+        def __exit__(self, type, value, traceback):
+            self.driver.Close()
+
+    # Context managers for entering iframe
+    class iframe(object):
+            def __init__(self, driver, frame, delay=10):
+                try:
+                    self.driver = driver
+                    WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, type, value, traceback):
+                try:
+                    self.driver.switch_to.default_content()
+                except:
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+
+    # SSH Context Manager
+    class SSH(object):
+        def __init__(self, IP=DTCT["SSH_IP"], USER=DTCT["SSH_Username"], PASSWORD=DTCT["SSH_Password"]):
+            self.ssh = SSH(IP=IP, USER=USER, PASSWORD=PASSWORD)
+
+        def __enter__(self):
+            return self.ssh
+
+        def __exit__(self, type, value, traceback):
+            self.ssh.Close()
 
 
 class Driver(object):
@@ -545,8 +586,6 @@ class Driver(object):
                 return True
             except:
                 print(getframeinfo(currentframe()).lineno, "Wait False", ID)
-        """if self.allure:
-            self.driver.get_screenshot_as_png()"""
 
     # Clicking on target Element type in current page
     def Click(self, ID, Type="auto", wait="No", delay=5, tries=10, **kwargs):
@@ -602,14 +641,12 @@ class Driver(object):
 
             elif ID == "gwt-debug-TopicsNode_traffic-utilization-report-content":
                 try:
-                    my = WebDriverWait(self.driver, 10).until(
-                        EC.frame_to_be_available_and_switch_to_it("Concurrent_Connections_Report"))
-                    self.Wait(
-                        "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
-                    self.driver.switch_to.default_content()
+                    with CM.iframe(self.driver,"Concurrent_Connections_Report"):
+                        self.Wait(
+                            "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
                     self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
                 except:
-                    pass
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
             elif wait != "No":
                 self.Wait(wait)
@@ -674,14 +711,12 @@ class Driver(object):
 
             elif ID == "gwt-debug-TopicsNode_traffic-utilization-report-content":
                 try:
-                    my = WebDriverWait(self.driver, 10).until(
-                        EC.frame_to_be_available_and_switch_to_it("Concurrent_Connections_Report"))
-                    self.Wait(
-                        "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
-                    self.driver.switch_to.default_content()
+                    with CM.iframe(self.driver, "Concurrent_Connections_Report"):
+                        self.Wait(
+                            "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
                     self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
                 except:
-                    pass
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
             elif wait != "No":
                 self.Wait(wait, Type)
@@ -725,58 +760,7 @@ class Driver(object):
         if self.Wait(ID, delay=delay):
             self.Click(ID, tries=tries)
 
-    # Click on target Element type on target iframe
-    def FrameS(self, frame, ROW_ID, Type="CSS", CLK="No_Text", fill="No_Text", **kwargs):
-        try:
-            my = WebDriverWait(self.driver, 10).until(EC.frame_to_be_available_and_switch_to_it(frame))
-        except:
-            print(getframeinfo(currentframe()).lineno, "No iframe")
-        if Type == "CSS":
-            try:
-                self.Wait(ROW_ID)
-                if fill != "No_Text":
-                    self.Fill(ROW_ID, fill, Type)
-                if CLK:
-                    self.driver.find_element_by_css_selector(CLK).click()
-            except:
-                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
-        elif Type == "CLASS":
-            try:
-                self.Wait(ROW_ID,type="class")
-                if fill != "No_Text":
-                    self.Fill(ROW_ID, fill, Type)
-                if CLK:
-                    self.driver.find_element_by_class_name(ROW_ID).click()
-            except:
-                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
-        elif Type == "ID":
-            try:
-                self.Wait(ROW_ID)
-                if fill != "No_Text":
-                    self.Fill(ROW_ID, fill, Type)
-                if CLK:
-                    self.driver.find_element_by_id(ROW_ID).click()
-            except:
-                print(getframeinfo(currentframe()).lineno, "No iframe " + ROW_ID)
-
-        self.driver.switch_to.default_content()
-    class iframe(object):
-        def __init__(self, driver,frame,delay=10):
-            try:
-                self.driver = driver
-                WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
-            except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, type, value, traceback):
-            try:
-                self.driver.switch_to.default_content()
-            except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
-
+    # Experimental
     def Displayed(self, ID):
         ID = ID.strip()
         if self.Wait(ID):
@@ -847,7 +831,7 @@ class Driver(object):
         self.Click("gwt-debug-Security Monitoring")
         self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
         self.Click("#gwt-debug-TopicsNode_traffic-utilization-report-content", "CSS")
-        with self.iframe(self.driver,"Traffic_Utilization"):
+        with CM.iframe(self.driver,"Traffic_Utilization"):
             self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
             self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
             self.Click('body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect')
@@ -863,8 +847,8 @@ class Driver(object):
     def DF_Current_Attack_Table(self):
         self.DF_Configuration()
         self.Click("gwt-debug-Security Monitoring")
-        self.FrameS('security-dashboard-table',
-                    'body > div.main-view.ng-scope > ng-include > section > section > section:nth-child(2) > div.the-table > rw-table2 > section > div.table-wrapper > div.table-body-wrapper > table > tbody > tr:nth-child(1)')
+        with CM.iframe(self.driver,'security-dashboard-table'):
+            self.Wait('body > div.main-view.ng-scope > ng-include > section > section > section:nth-child(2) > div.the-table > rw-table2 > section > div.table-wrapper > div.table-body-wrapper > table > tbody > tr:nth-child(1)')
         self.Click("#gwt-debug-ConfigTab_Tab", "CSS")
 
     @prefix_decorator("DF_Workflow_Rules")
@@ -899,19 +883,21 @@ class Driver(object):
         self.Click('gwt-debug-Security Monitoring')
         self.Click('#gwt-debug-TopicsStack_TrafficMonitoring_tab', "CSS")
         self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
-        self.FrameS('Traffic_Utilization_Report', 'legend-group', Type="Class")
+        with CM.iframe(self.driver,'Traffic_Utilization_Report'):
+            self.Wait('legend-group',Type='class')
         try:
             myElem = self.driver.find_element_by_css_selector('#loading-image')
             while myElem.is_displayed():
                 pass
         except:
-            pass
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
     @prefix_decorator("DP_Current_Attack")
     def One_DP_Current_Attack_Table(self):
         self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
         self.Click('gwt-debug-Security Monitoring')
-        self.FrameS('security-dashboard-table', 'table-row', Type="CLASS")
+        with CM.iframe(self.driver,'security-dashboard-table'):
+            self.Wait('table-row',Type='class')
 
     ################################################################
     # _________AMS_Screenshots_______________
@@ -1069,7 +1055,7 @@ class SSH(object):
     Class for SSH
     """
 
-    def __init__(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+    def __init__(self, IP=DTCT["SSH_IP"], USER=DTCT["SSH_Username"], PASSWORD=DTCT["SSH_Password"]):
         """
         Support only ipV4
         :param IP:
@@ -1084,7 +1070,7 @@ class SSH(object):
             self.NOT_IP = False
             self.ssh_connect(IP, USER, PASSWORD)
 
-    def ssh_connect(self, IP=(DTCT["SSH_IP"]), USER=(DTCT["SSH_Username"]), PASSWORD=(DTCT["SSH_Password"])):
+    def ssh_connect(self, IP=DTCT["SSH_IP"], USER=DTCT["SSH_Username"], PASSWORD=DTCT["SSH_Password"]):
         """
         ssh connection
         """
@@ -1602,7 +1588,7 @@ class Check(object):
         """
 
         @staticmethod
-        def Graph_Comparison_BP(Legit_Only=False):
+        def Graph_Comparison_BP(Legit_Only=False,driver = None):
             flag = False
 
             def delete():
@@ -1613,10 +1599,10 @@ class Check(object):
                     rmtree("Test_Report")
                 except:
                     pass
-
             try:
                 # Downloading Report from Vision
-                driver = Driver(allure = True)
+                if not driver:
+                    driver = Driver()
                 driver.Click(
                     "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
                 driver.Click(
@@ -1666,7 +1652,7 @@ class Check(object):
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 delete()
                 driver.Close()
-                return flag, False
+                return flag
 
             try:
                 if not os.path.isdir("Test_Report"):
@@ -1713,7 +1699,6 @@ class Check(object):
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 delete()
-                flag = (flag,driver.allure)
                 driver.Close()
                 return flag
 
