@@ -191,7 +191,7 @@ def file_check(extract=True, delay=5):
 class CM(object):
     # Driver Context Manager
     class Chrome(object):
-        def __init__(self, url="", allure=True, Name="Test"):
+        def __init__(self, url="", allure=True, Name="Test", base_resolution=100):
             self.driver = Driver(url=url, allure=allure, Name=Name)
 
         def __enter__(self):
@@ -284,7 +284,7 @@ def prefix_decorator(prefix=""):
 
 class Driver(object):
 
-    def __init__(self, Name="Test", url="", allure=False, Headless_Flag=False):
+    def __init__(self, Name="Test", url="", allure=False, Headless_Flag=False, base_resolution=100):
         import chromedriver_autoinstaller
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
@@ -293,7 +293,7 @@ class Driver(object):
             os.mkdir("ScreenShots")
         except FileExistsError:
             pass
-        self.path, self.flag_change_size, self.start = os.path.join(cwd, "ScreenShots"), False, time.perf_counter()
+        self.path, self.flag_change_size,self.base_resolution, self.start = os.path.join(cwd, "ScreenShots"), False,base_resolution, time.perf_counter()
 
         # Opening Chrome Driver
         options = Options()
@@ -348,14 +348,14 @@ class Driver(object):
         if size != 100:
             try:
                 self.Get("chrome://settings/")
-                self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({size / 100:.1f});')
+                self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({(size*self.base_resolution) / 10000:.1f});')
                 # self.driver.execute_script(f"document.body.style.zoom='{size}%'")
                 self.flag_change_size = True
             except:
                 print(getframeinfo(currentframe()).lineno, "Screen_Size_Error")
         else:
             self.Get("chrome://settings/")
-            self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom(1.0);')
+            self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({self.base_resolution / 100:.1f});')
             # self.driver.execute_script("document.body.style.zoom='100%'")
             self.flag_change_size = False
 
@@ -588,7 +588,7 @@ class Driver(object):
                 print(getframeinfo(currentframe()).lineno, "Wait False", ID)
 
     # Clicking on target Element type in current page
-    def Click(self, ID, Type="auto", wait="No", delay=5, tries=10, **kwargs):
+    def Click(self, ID, Type="auto", wait="No", delay=5, tries=3, **kwargs):
         ID = ID.strip()
         Type = Type.lower()
         if "auto" in Type:
