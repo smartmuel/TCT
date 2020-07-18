@@ -218,6 +218,10 @@ def prefix_decorator(prefix=""):
             result = function(self, *args, **kwargs)
             if self.allure:
                 self.image = self.driver.get_screenshot_as_png()
+                if "DP_Current_Attack" in prefix or "DP_Traffic" in prefix:
+                    self.Name = f"{prefix}_{DP_index}"
+                else:
+                    self.Name = prefix
             else:
                 if prefix:
                     try:
@@ -232,44 +236,46 @@ def prefix_decorator(prefix=""):
                     # fix
                     self.driver.save_screenshot(N)
                     os.chdir(cwd)
-                    if self.flag_change_size:
-                        self.Screen_Size()
-                print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
+            if self.flag_change_size:
+                self.Screen_Size()
+            print(getframeinfo(currentframe()).lineno, time.perf_counter() - start, prefix)
             return result
 
         return wrapper_test
 
     return decorator_test
 
+
 # Context Managers Class
 class CM(object):
-
     # Driver Context Manager
     class Chrome(object):
         def __init__(self, url="", allure=True, Name="Test"):
-            self.driver = Driver()
+            self.driver = Driver(url=url, allure=allure, Name=Name)
+
         def __enter__(self):
             return self.driver
+
         def __exit__(self, type, value, traceback):
             self.driver.Close()
 
     # Context managers for entering iframe
     class iframe(object):
-            def __init__(self, driver, frame, delay=10):
-                try:
-                    self.driver = driver
-                    WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
-                except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+        def __init__(self, driver, frame, delay=10):
+            try:
+                self.driver = driver
+                WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
-            def __enter__(self):
-                return self
+        def __enter__(self):
+            return self
 
-            def __exit__(self, type, value, traceback):
-                try:
-                    self.driver.switch_to.default_content()
-                except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+        def __exit__(self, type, value, traceback):
+            try:
+                self.driver.switch_to.default_content()
+            except:
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
 
     # SSH Context Manager
     class SSH(object):
@@ -284,20 +290,25 @@ class CM(object):
 
     # Context managers timer
     class timer(object):
-            def __init__(self, TIME):
-                self.TIME = TIME
-                self.start = time.perf_counter()
-            def __enter__(self):
-                return self
+        def __init__(self, TIME, Delay=None):
+            self.TIME = TIME
+            self.start = time.perf_counter()
+            self.Delay = Delay if Delay else TIME
+            time.sleep(int(Delay))
 
-            def __exit__(self, type, value, traceback):
-                try:
-                    time.sleep(self.TIME - int(time.perf_counter() - self.start))
-                except:pass#silenced
+        def __enter__(self):
+            return self
+
+        def __exit__(self, type, value, traceback):
+            try:
+                time.sleep(self.TIME - int(time.perf_counter() - self.start))
+            except:
+                pass  # silenced
+
 
 class Driver(object):
 
-    def __init__(self, Name="Test", url="",allure = False,Headless_Flag = False):
+    def __init__(self, Name="Test", url="", allure=False, Headless_Flag=False):
         import chromedriver_autoinstaller
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
@@ -340,7 +351,8 @@ class Driver(object):
         finally:
             os.chdir(cwd)
 
-        self.Name,self.Main_Name,self.Password_Done,self.allure,self.image = Name, Name.split("_")[0], False, allure, None
+        self.Name, self.Main_Name, self.Password_Done, self.allure, self.image = Name, Name.split("_")[
+            0], False, allure, None
 
         if url == "":
             self.Vision()
@@ -351,7 +363,7 @@ class Driver(object):
         return self.driver
 
     def Get(self, URL):
-        if "http" not in URL:
+        if "://" not in URL:
             URL = f"http://{URL}"
         self.driver.get(URL)
         self.driver.fullscreen_window()
@@ -423,10 +435,10 @@ class Driver(object):
             print(getframeinfo(currentframe()).lineno, "HOME took too much time!")
 
     # Driver enter MSSP
-    def MSSP(self, delay = 5):
+    def MSSP(self, delay=5):
         self.Get(DTCT["MSSP_Dash_URL"])
         try:
-            self.Wait('username', Type="name", delay = delay)
+            self.Wait('username', Type="name", delay=delay)
             print(getframeinfo(currentframe()).lineno, "MSSP is ready!")
             self.driver.find_element_by_name("username").send_keys(DTCT["MSSP_Username"])
             self.driver.find_element_by_name("password").send_keys(DTCT["MSSP_Password"])
@@ -653,7 +665,7 @@ class Driver(object):
 
             elif ID == "gwt-debug-TopicsNode_traffic-utilization-report-content":
                 try:
-                    with CM.iframe(self.driver,"Concurrent_Connections_Report"):
+                    with CM.iframe(self.driver, "Concurrent_Connections_Report"):
                         self.Wait(
                             "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
                     self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
@@ -736,7 +748,7 @@ class Driver(object):
         elif "class" in Type:
             for i in range(1000):
                 try:
-                    self.Wait(ID,Type="class")
+                    self.Wait(ID, Type="class")
                     self.driver.find_element_by_class_name(ID).click()
                     # Fail = False
                     break
@@ -843,10 +855,13 @@ class Driver(object):
         self.Click("gwt-debug-Security Monitoring")
         self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
         self.Click("#gwt-debug-TopicsNode_traffic-utilization-report-content", "CSS")
-        with CM.iframe(self.driver,"Traffic_Utilization"):
-            self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
-            self.Click("body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
-            self.Click('body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect')
+        with CM.iframe(self.driver, "Traffic_Utilization"):
+            self.Click(
+                "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select")
+            self.Click(
+                "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > div.top-left > div > select > option:nth-child(7)")
+            self.Click(
+                'body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-panel-container > section:nth-child(1) > div.content > rw-line-chart > div > svg.main > g > rect')
 
     @prefix_decorator("DF_HA")
     def DF_High_Availity(self):
@@ -859,8 +874,9 @@ class Driver(object):
     def DF_Current_Attack_Table(self):
         self.DF_Configuration()
         self.Click("gwt-debug-Security Monitoring")
-        with CM.iframe(self.driver,'security-dashboard-table'):
-            self.Wait('body > div.main-view.ng-scope > ng-include > section > section > section:nth-child(2) > div.the-table > rw-table2 > section > div.table-wrapper > div.table-body-wrapper > table > tbody > tr:nth-child(1)')
+        with CM.iframe(self.driver, 'security-dashboard-table'):
+            self.Wait(
+                'body > div.main-view.ng-scope > ng-include > section > section > section:nth-child(2) > div.the-table > rw-table2 > section > div.table-wrapper > div.table-body-wrapper > table > tbody > tr:nth-child(1)')
         self.Click("#gwt-debug-ConfigTab_Tab", "CSS")
 
     @prefix_decorator("DF_Workflow_Rules")
@@ -895,8 +911,8 @@ class Driver(object):
         self.Click('gwt-debug-Security Monitoring')
         self.Click('#gwt-debug-TopicsStack_TrafficMonitoring_tab', "CSS")
         self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
-        with CM.iframe(self.driver,'Traffic_Utilization_Report'):
-            self.Wait('legend-group',Type='class')
+        with CM.iframe(self.driver, 'Traffic_Utilization_Report'):
+            self.Wait('legend-group', Type='class')
         try:
             myElem = self.driver.find_element_by_css_selector('#loading-image')
             while myElem.is_displayed():
@@ -908,8 +924,8 @@ class Driver(object):
     def One_DP_Current_Attack_Table(self):
         self.Click(f"gwt-debug-DevicesTree_Node_{DP_index}")
         self.Click('gwt-debug-Security Monitoring')
-        with CM.iframe(self.driver,'security-dashboard-table'):
-            self.Wait('table-row',Type='class')
+        with CM.iframe(self.driver, 'security-dashboard-table'):
+            self.Wait('table-row', Type='class')
 
     ################################################################
     # _________AMS_Screenshots_______________
@@ -991,7 +1007,7 @@ class Driver(object):
 
 
 class BP(object):
-    
+
     @staticmethod
     def Start(AppSim=[], Session=[], Appsim_MAX=DTCT["BP_AppSim_Max_Number"] + 1,
               Session_MAX=DTCT["BP_Session_Max_Number"] + 1, Test_Name=DTCT["BP_Test"]):
@@ -1033,7 +1049,7 @@ class BP(object):
     @staticmethod
     def Stop(csv=False):
         try:
-            bps = BPS((DTCT["BP_IP"]), (DTCT["BP_Username"]), (DTCT["BP_Password"]))
+            bps = BPS(DTCT["BP_IP"], DTCT["BP_Username"], DTCT["BP_Password"])
             # login
             bps.login()
             # stopping test
@@ -1418,7 +1434,7 @@ class Check(object):
     """
     Class For All The Tests
     """
-    
+
     # Count of Syslog Start Detection from DF
     start = set()
 
@@ -1433,7 +1449,7 @@ class Check(object):
 
     # Count of total DP terminations
     dp_term = 0
-    
+
     class DP(object):
         """
         DP Tests
@@ -1600,9 +1616,10 @@ class Check(object):
         """
 
         @staticmethod
-        def Graph_Comparison_BP(Legit_Only=False,driver = None):
+        def Graph_Comparison_BP(Legit_Only=False, driver=None):
             flag = False
             driver_flag = True
+
             def delete():
                 for file in os.listdir(os.getcwd()):
                     if file.endswith(".zip") or file.endswith(".crdownload") or file.endswith(".csv"):
@@ -1611,10 +1628,12 @@ class Check(object):
                     rmtree("Test_Report")
                 except:
                     pass
+
             try:
                 # Downloading Report from Vision
                 if not driver:
                     driver = Driver()
+                else:
                     driver_flag = False
                 driver.Click(
                     "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
@@ -1649,7 +1668,6 @@ class Check(object):
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.reports-list-placeholder > div > ul > li > div.vrm-reports-item-expaneded-details > div > div.reports-logs > div > div > ul > li:nth-child(1) > li > a")
                 driver.Click(
                     "#main-content > div.vrm-reports-container > div.reports-main-content > div.report-preview > div > div > header > button")
-                driver.DF_Traffic_Utillization()
                 if not file_check():
                     delete()
                     return flag
@@ -1689,15 +1707,15 @@ class Check(object):
                             break
                 # TR - Trafic Rate , TB - Trafic Bandwidth
                 int1_TR = read_csv(StringIO("".join(data[index[0]:index[1]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype(
+                                                                                       regex=True).astype(
                     "float64")
                 int1_TB = read_csv(StringIO("".join(data[index[2]:index[3]]))).replace(to_replace=r',', value='',
-                                                                                             regex=True).astype(
+                                                                                       regex=True).astype(
                     "float64")
-                #int2_TR = read_csv(StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
+                # int2_TR = read_csv(StringIO("".join(data[index[4]:index[5]]))).replace(to_replace=r',', value='',
                 #                                                                            regex=True).astype(
                 #   "float64")
-                #int2_TB = read_csv(StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
+                # int2_TB = read_csv(StringIO("".join(data[index[6]:index[7]]))).replace(to_replace=r',', value='',
                 #                                                                            regex=True).astype(
                 #   "float64")
                 if Legit_Only:
