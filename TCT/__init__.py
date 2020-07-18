@@ -1602,7 +1602,7 @@ class Check(object):
         @staticmethod
         def Graph_Comparison_BP(Legit_Only=False,driver = None):
             flag = False
-
+            driver_flag = True
             def delete():
                 for file in os.listdir(os.getcwd()):
                     if file.endswith(".zip") or file.endswith(".crdownload") or file.endswith(".csv"):
@@ -1615,6 +1615,7 @@ class Check(object):
                 # Downloading Report from Vision
                 if not driver:
                     driver = Driver()
+                    driver_flag = False
                 driver.Click(
                     "#global-menu > nav > ul > li:nth-child(3) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.WNjlY")
                 driver.Click(
@@ -1663,9 +1664,9 @@ class Check(object):
             except:
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
                 delete()
-                driver.Close()
+                if driver_flag:
+                    driver.Close()
                 return flag
-
             try:
                 if not os.path.isdir("Test_Report"):
                     BP.CSV_Export()
@@ -1711,7 +1712,8 @@ class Check(object):
                 print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
             finally:
                 delete()
-                driver.Close()
+                if driver_flag:
+                    driver.Close()
                 return flag
 
     class FD(object):
