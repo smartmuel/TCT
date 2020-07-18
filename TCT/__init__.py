@@ -246,7 +246,7 @@ class CM(object):
 
     # Driver Context Manager
     class Chrome(object):
-        def __init__(self, url="", allure=False, Name="Test"):
+        def __init__(self, url="", allure=True, Name="Test"):
             self.driver = Driver()
         def __enter__(self):
             return self.driver
@@ -282,6 +282,18 @@ class CM(object):
         def __exit__(self, type, value, traceback):
             self.ssh.Close()
 
+    # Context managers timer
+    class timer(object):
+            def __init__(self, TIME):
+                self.TIME = TIME
+                self.start = time.perf_counter()
+            def __enter__(self):
+                return self
+
+            def __exit__(self, type, value, traceback):
+                try:
+                    time.sleep(self.TIME - int(time.perf_counter() - self.start))
+                except:pass#silenced
 
 class Driver(object):
 
