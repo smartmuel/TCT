@@ -50,6 +50,13 @@ class Configuration(object):
         self.path, self.DP_Info, self.DF_Info, self.DF_HA, self.json_file = os.getcwd(), {}, {}, False, json_file
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
+        if len(self.json) < len(CLI.Json.json_data):
+            for i in CLI.Json.json_data.keys():
+                try:
+                    if self.json[i]:
+                        pass
+                except:
+                    self.json[i] = CLI.Json.json_data[i]
         self.json["Syslog_IP"] = self.json["Syslog_IP"] if self.json["Syslog_IP"] else get_ip_address()
         print("json file in:", os.getcwd())
         try:
