@@ -326,7 +326,8 @@ class Driver(object):
                     exit()
         finally:
             os.chdir(cwd)
-
+        if self.allure:
+            self.driver.set_window_size(1920,1080,self.driver.window_handles[0])
         self.Name, self.Main_Name, self.Password_Done, self.allure, self.image = Name, Name.split("_")[
             0], False, allure, None
 
@@ -598,21 +599,21 @@ class Driver(object):
                         self.driver.find_element_by_css_selector(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                 elif ID[0] == "/":
                     try:
                         self.Wait(ID)
                         self.driver.find_element_by_xpath(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                 else:
                     try:
                         self.Wait(ID)
                         self.driver.find_element_by_id(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
 
             if ID == '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div':
                 self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
@@ -658,7 +659,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
@@ -677,7 +678,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                     # Fail = True
             else:
                 if ID == 'gwt-debug-TopicsNode_traffic-utilization-report-content':
@@ -728,7 +729,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
@@ -743,7 +744,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Failed to Click" + str(i) + ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
