@@ -326,11 +326,10 @@ class Driver(object):
                     exit()
         finally:
             os.chdir(cwd)
-        if self.allure:
-            self.driver.set_window_size(1920,1080,self.driver.window_handles[0])
         self.Name, self.Main_Name, self.Password_Done, self.allure, self.image = Name, Name.split("_")[
             0], False, allure, None
-
+        if self.allure:
+            self.driver.set_window_size(1920,1080,self.driver.window_handles[0])
         if self.base_resolution != 100:
             self.Screen_Size()
         self.Get(url) if url else self.Vision()
