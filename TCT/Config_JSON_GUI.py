@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter import scrolledtext
 import json,time,pathlib,os
-from . import Config_JSON_CLI
+import Config_JSON_CLI
 
 """path = pathlib.Path().absolute()
 DTCT_Path = ""
@@ -23,13 +23,17 @@ class cd(object):
         os.chdir(cwd)
 
 try:
-    with cd(Config_Json["Json_Folder_Path"]):
-        with open(Config_Json["Json_Name"], "r") as read_file:
-            DTCT1 = json.load(read_file)
+    with open(Config_Json["Json_Name"], "r") as read_file:
+        DTCT1 = json.load(read_file)
 except:
-    with open("Data_For_TCT.json", "a") as read_file:
-        json.dump(Config_JSON_CLI.Json.json_data, read_file, ensure_ascii=False, indent=4, sort_keys=True)
-        DTCT1 = Config_JSON_CLI.Json.json_data
+    try:
+        with cd(Config_Json["Json_Folder_Path"]):
+            with open(Config_Json["Json_Name"], "r") as read_file:
+                DTCT1 = json.load(read_file)
+    except:
+        with open(Config_Json["Json_Name"], "w") as read_file:
+            json.dump(Config_JSON_CLI.Json.json_data, read_file, ensure_ascii=False, indent=4, sort_keys=True)
+            DTCT1 = Config_JSON_CLI.Json.json_data
 
 os.chdir(os.getcwd())
 
@@ -52,47 +56,46 @@ txt.grid(column=0, row=1)
 def clicked():
     if combo.get() == "Must_Config":
         txt.delete('1.0', END)
-        txt.insert(INSERT,json.dumps(DTCT,  indent=4, sort_keys=True))
+        txt.insert(INSERT,json.dumps(DTCT,  indent=4))
 
     elif combo.get() == "ALL":
         txt.delete('1.0', END)
-        txt.insert(INSERT, json.dumps(DTCT, indent=4, sort_keys=True))
+        txt.insert(INSERT, json.dumps(DTCT, indent=4))
 
     elif combo.get() == "Vision":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "Vision_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "Vision_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "FlowDetector":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "FD_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "FD_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "MSSP":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "MSSP_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "MSSP_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "DefenseFlow":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "DF_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "DF_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "DefencePro":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "DP_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "DP_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "BreakingPoint":
         txt.delete('1.0', END)
-        txt.insert(INSERT,
-                   json.dumps({your_key: DTCT[your_key] for your_key in DTCT.keys() if "BP_" in your_key}, indent=4,
-                              sort_keys=True))
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "BP_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
+
+    elif combo.get() == "BSN":
+        txt.delete('1.0', END)
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "BSN_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
 def clicked1():
     d = json.loads(txt.get("0.1", END))
@@ -110,7 +113,7 @@ def clicked2():
 
 combo = Combobox(window, width=40)
 
-combo['values']= ("Must_Config", "Vision", "MSSP", "DefenseFlow", "DefencePro", "BreakingPoint","FlowDetector", "ALL")
+combo['values']= ("Must_Config", "Vision", "MSSP", "DefenseFlow", "DefencePro", "BreakingPoint","FlowDetector","BSN", "ALL")
 
 combo.grid(column=0, row=0)
 
