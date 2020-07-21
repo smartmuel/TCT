@@ -53,6 +53,9 @@ txt.insert(INSERT,json.dumps(DTCT, indent=4, sort_keys=True))
 
 txt.grid(column=0, row=1)
 
+Dictionaty = {"Vision": "Vision_", "FlowDetector": "FD_", "MSSP": "MSSP_", "DefenseFlow": "DF_", "DefencePro": "DP_",
+              "BreakingPoint": "BP_", "BSN": "BSN_"}
+
 def clicked():
     if combo.get() == "Must_Config":
         txt.delete('1.0', END)
@@ -93,6 +96,11 @@ def clicked():
         txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
 
     elif combo.get() == "BSN":
+        txt.delete('1.0', END)
+        JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "BSN_" in your_key}
+        txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))
+
+    elif combo.get() == "Other":
         txt.delete('1.0', END)
         JSON = {your_key: DTCT[your_key] for your_key in DTCT.keys() if "BSN_" in your_key}
         txt.insert(INSERT, json.dumps({key: JSON[key] for key in sorted(JSON.keys(), reverse=True)}, indent=4))

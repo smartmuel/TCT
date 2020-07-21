@@ -50,6 +50,7 @@ class Configuration(object):
         self.path, self.DP_Info, self.DF_Info, self.DF_HA, self.json_file = os.getcwd(), {}, {}, False, json_file
         with open(json_file, "r") as read_file:
             self.json = json.load(read_file)
+        # Check Configuration with Configuration Templet.
         if len(self.json) < len(CLI.Json.json_data):
             for i in CLI.Json.json_data.keys():
                 try:
@@ -78,7 +79,7 @@ class Configuration(object):
         except NameError:
             print(getframeinfo(currentframe()).lineno, "Check if paramiko installed")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
     def __setitem__(self, key, value):
         self.json[key] = value
@@ -104,7 +105,7 @@ class Configuration(object):
                         ssh.connect(i, port=22, username=self.json["DF_Username"], password=self.json["DF_Password"])
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
                 else:
                     continue
                 stdin, stdout, stderr = ssh.exec_command("ifconfig")
@@ -190,7 +191,7 @@ def file_check(extract=True, delay=5):
                 flag = True
                 break
     except:
-        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+        print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
     finally:
         return flag
 
@@ -214,7 +215,7 @@ class CM(object):
                 self.driver = driver
                 WebDriverWait(self.driver, delay).until(EC.frame_to_be_available_and_switch_to_it(frame))
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
         def __enter__(self):
             return self
@@ -223,7 +224,7 @@ class CM(object):
             try:
                 self.driver.switch_to.default_content()
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
     # SSH Context Manager
     class SSH(object):
@@ -652,7 +653,7 @@ class Driver(object):
                             "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
                     self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
             elif wait != "No":
                 self.Wait(wait)
@@ -722,7 +723,7 @@ class Driver(object):
                             "body > div.main-view.ng-scope > ng-include > section > side-tabs > div > div.tab-bar > span")
                     self.Click('gwt-debug-TopicsNode_traffic-utilization-report-content')
                 except:
-                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                    print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
             elif wait != "No":
                 self.Wait(wait, Type)
@@ -900,7 +901,7 @@ class Driver(object):
             while myElem.is_displayed():
                 pass
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
     @prefix_decorator("DP_Current_Attack")
     def One_DP_Current_Attack_Table(self):
@@ -1040,12 +1041,12 @@ class BP(object):
             if csv:
                 bps.exportTestReport(DTCT["BP_Test_ID"], "Test_Report.csv", "Test_Report")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
         finally:
             try:
                 bps.logout()
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
 
     @staticmethod
     def CSV_Export():
@@ -1055,7 +1056,7 @@ class BP(object):
             bps.login()
             bps.exportTestReport(DTCT["BP_Test_ID"], "Test_Report.csv", "Test_Report")
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
         finally:
             bps.logout()
 
@@ -1399,11 +1400,11 @@ class Syslog(object):
             Telnet.DP_Syslog_DELETE()
             Vision_API.Syslog_DELETE()
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
         try:
             self.server.shutdown()
         except:
-            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
         api = Vision_API()
         com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections", True)
         DTCT["OngoingProtections"] = len(com["OngoingProtections"])
@@ -1415,21 +1416,6 @@ class Check(object):
     Class For All The Tests
     """
 
-    # Count of Syslog Start Detection from DF
-    start = set()
-
-    # Count of Syslog End Detection from DF
-    end = set()
-
-    # Count of total Syslog errors
-    error = set()
-
-    # Count of total Imports to DP
-    Import = 0
-
-    # Count of total DP terminations
-    dp_term = 0
-
     class DP(object):
         """
         DP Tests
@@ -1437,7 +1423,7 @@ class Check(object):
 
         @staticmethod
         def Port_Error(Legit_Only=False):
-            flag = True  # output flag
+            flag, fail, err = True, "", None  # output flag
             try:
                 for i in DTCT.DP_Info.values():  # For all DPs that the DF is in contact with
                     telnet = Telnet(i)
@@ -1446,9 +1432,10 @@ class Check(object):
                     for j in DTCT["DP_Ports"]:  # For the ports the configured at Data_For_TCT.json
                         if (not re.search(rf"{j}\s+[0-9]+\s+0\s+0\s+[0-9]+\s+0\s+0", com, re.IGNORECASE)) and re.search(
                                 rf"^{j}\s+", com, re.IGNORECASE):
+                            fail = com
                             print(f"{getframeinfo(currentframe()).lineno} Port Error:")
                             print(getframeinfo(currentframe()).lineno, com)
-                            return False
+                            return False, fail
 
                     else:
                         if Legit_Only:
@@ -1460,18 +1447,19 @@ class Check(object):
                                         re.IGNORECASE)) and (
                                     not re.search(rf"Total Counters\s+: Forwards\s+=\s+[0-9]+\s+Discards\s+=\s+0", com,
                                                   re.IGNORECASE)):
+                                fail = com
                                 print(
                                     f"{getframeinfo(currentframe()).lineno} dpe-statistics Error:")
                                 print(getframeinfo(currentframe()).lineno, com)
-                                return False
+                                return False, fail
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
-                return flag
+                return flag, fail
 
         @staticmethod
         def No_BDOS_Attack():
-            flag = False
+            flag, fail = False, ""
             try:
                 for i in list(DTCT.DP_Info.values()):
                     telnet = Telnet(i)
@@ -1479,17 +1467,18 @@ class Check(object):
                     if len(com) > 4:
                         print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:")
                         print(getframeinfo(currentframe()).lineno, com)
+                        fail = com
                         break
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
-                return flag
+                return flag, fail
 
         @staticmethod
         def BDOS_Attacks():
-            flag = False
+            flag, fail = False, ""
             try:
                 for i in list(DTCT.DP_Info.values()):
                     telnet = Telnet(i)
@@ -1497,13 +1486,14 @@ class Check(object):
                     if len(com) < 5:
                         print(f"{getframeinfo(currentframe()).lineno} BDOS ATTACK:")
                         print(getframeinfo(currentframe()).lineno, com)
+                        fail = com
                         break
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
-                return flag
+                return flag, fail
 
         @staticmethod
         def Support_File_Extract():
@@ -1519,7 +1509,7 @@ class Check(object):
                     driver.Click("gwt-debug-DeviceControlBar_Operations_getFileFromDevice_Support")
                     flag = file_check()
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
                 driver.Close()
                 return flag
@@ -1531,23 +1521,24 @@ class Check(object):
 
         @staticmethod
         def BGP_Established():
-            flag = False
+            flag, fail = False, ""
             try:
                 api = Vision_API()
                 response = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
                 for i in response["BgpPeers"]:
                     if i["state"] != "ESTABLISHED":
+                        fail = i
                         break
                 else:
                     flag = True
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
-                return flag
+                return flag, fail
 
         @staticmethod
         def BGP_Announcements():
-            flag = False
+            flag, fail = False, ""
             api = Vision_API()
             response1 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/BgpPeers')
             response2 = api.Get(f'https://{DTCT["Vision_IP"]}/mgmt/device/df/config/Announcements', True)
@@ -1563,7 +1554,7 @@ class Check(object):
                 for i in response2["Announcements"]:
                     if i["status"] == "SUCCESS":"""
                 flag = True
-            return flag
+            return flag, fail
 
         @staticmethod
         def Support_File_Extract():
@@ -1585,7 +1576,7 @@ class Check(object):
                     "body > div.ReactModalPortal > div > div > div > div:nth-child(4) > div:nth-child(1) > div > div:nth-child(1) > button")
                 flag = file_check(extract=False)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
                 driver.Close()
                 return flag
@@ -1597,7 +1588,7 @@ class Check(object):
 
         @staticmethod
         def Graph_Comparison_BP(Legit_Only=False, driver=None):
-            flag = False
+            flag, fail = False, ""
             driver_flag = True
 
             def delete():
@@ -1660,7 +1651,7 @@ class Check(object):
                 with open("Traffic_Rate.csv", "r") as csv:
                     TR = read_csv(csv).astype("float64")
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
                 delete()
                 if driver_flag:
                     driver.Close()
@@ -1707,7 +1698,7 @@ class Check(object):
                              'ethTxFrameDataRate'].mean() > 0.91
                     flag = Frames and BW
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
                 delete()
                 if driver_flag:
@@ -1721,16 +1712,17 @@ class Check(object):
 
         @staticmethod
         def No_Detection():
-            flag = False
+            flag, fail = True, ""
             try:
                 response = requests.get(f'http://{DTCT["FD_IP"]}:10007/blackhole',
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
-                if len(response.json()["values"]) == 0:
-                    flag = True
+                if len(response.json()["values"]) != 0:
+                    fail = response.json()["values"]
+                    flag = False
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
-                return flag
+                return flag, fail
 
         @staticmethod
         def Detection_Syslog_DF():
@@ -1740,7 +1732,7 @@ class Check(object):
                                         auth=(DTCT["FD_Username"], DTCT["FD_Password"]))
                 flag = len(response.json()["values"]) == len(Check.start)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
                 return flag
 
@@ -1776,6 +1768,21 @@ class Check(object):
                         break
                     time.sleep(1)
             except:
-                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0])
+                print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
             finally:
                 return flag
+
+    # Count of Syslog Start Detection from DF
+    start = set()
+
+    # Count of Syslog End Detection from DF
+    end = set()
+
+    # Count of total Syslog errors
+    error = set()
+
+    # Count of total Imports to DP
+    Import = 0
+
+    # Count of total DP terminations
+    dp_term = 0
