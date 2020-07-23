@@ -1446,21 +1446,3 @@ class Syslog(object):
 
     # Count of total DP terminations
     dp_term = 0
-
-
-class Check(object):
-
-    # Count of Syslog Start Detection from DF
-    start = set()
-
-    # Count of Syslog End Detection from DF
-    end = set()
-
-    # Count of total Syslog errors
-    error = set()
-
-    # Count of total Imports to DP
-    Import = 0
-
-    # Count of total DP terminations
-    dp_term = 0
