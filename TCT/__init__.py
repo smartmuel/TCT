@@ -237,6 +237,28 @@ class CM(object):
         def __exit__(self, type, value, traceback):
             self.ssh.Close()
 
+    # Telnet Context Manager
+    class Telnet(object):
+        def __init__(self, HOST, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
+            self.telnet = Telnet(HOST=HOST, user=user, password=password)
+
+        def __enter__(self):
+            return self.telnet
+
+        def __exit__(self, type, value, traceback):
+            self.telnet.Close()
+
+    # Vision_API Context Manager
+    class Vision_API(object):
+        def __init__(self, Vision=DTCT["Vision_IP"]):
+            self.api = Vision_API(Vision=Vision)
+
+        def __enter__(self):
+            return self.api
+
+        def __exit__(self, type, value, traceback):
+            self.api.Logout()
+
     # Context managers timer
     class timer(object):
         def __init__(self, TIME, Delay=None):
