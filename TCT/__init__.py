@@ -119,8 +119,8 @@ class Configuration(object):
 
     def save(self):
         with cd(self.path):
-            self.json["Syslog_Start"] = list(Check.start)
-            self.json["Syslog_End"] = list(Check.end)
+            self.json["Syslog_Start"] = list(Syslog.start)
+            self.json["Syslog_End"] = list(Syslog.end)
             with open(self.json_file, 'w') as outfile:
                 json.dump(DTCT.json, outfile, ensure_ascii=False, indent=4, sort_keys=True)
 
@@ -1375,26 +1375,26 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
     def match(self):
         if "ERROR" in self.data:
-            Check.error.add(self.data)
+            Syslog.error.add(self.data)
         elif "attack started" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(
                 self.data)
             for match in matches:
-                Check.start.add(match.group(0))
+                Syslog.start.add(match.group(0))
         elif "attack ended" in self.data:
             matches = re.compile(
                 r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+').finditer(self.data)
             for match in matches:
-                Check.end.add(match.group(0))
+                Syslog.end.add(match.group(0))
         elif "Imported successfully" in self.data:
-            Check.Import += 1
+            Syslog.Import += 1
         elif " term " in self.data:
-            Check.dp_term += 1
+            Syslog.dp_term += 1
 
 
 class Syslog(object):
-
+    
     def __init__(self):
         Telnet.DP_Syslog_ADD()
         Vision_API.Syslog_ADD()
@@ -1431,6 +1431,21 @@ class Syslog(object):
         com = api.Get(f"https://{DTCT['Vision_IP']}/mgmt/device/df/config/OngoingProtections", True)
         DTCT["OngoingProtections"] = len(com["OngoingProtections"])
         DTCT.save()
+
+    # Count of Syslog Start Detection from DF
+    start = set()
+
+    # Count of Syslog End Detection from DF
+    end = set()
+
+    # Count of total Syslog errors
+    error = set()
+
+    # Count of total Imports to DP
+    Import = 0
+
+    # Count of total DP terminations
+    dp_term = 0
 
 
 class Check(object):
