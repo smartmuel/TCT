@@ -174,18 +174,15 @@ def file_check(extract=True, delay=5):
                     break
             else:
                 for file in os.listdir(os.getcwd()):
-                    if file.endswith(".zip"):
-                        if os.path.getsize(file) > 0:
-                            # time.sleep(3)
-                            if extract:
-                                with ZipFile(file, 'r') as zip:
-                                    zip.extractall()
-                            os.remove(file)
-                            break
-                    elif file.endswith(".tar.gz") or file.endswith(".csv"):
-                        if os.path.getsize(file) > 0:
-                            os.remove(file)
-                            break
+                    if file.endswith(".zip") and os.path.getsize(file) > 0:
+                        if extract:
+                            with ZipFile(file, 'r') as zip:
+                                zip.extractall()
+                        os.remove(file)
+                        break
+                    elif (file.endswith(".tar.gz") or file.endswith(".csv")) and os.path.getsize(file) > 0:
+                        os.remove(file)
+                        break
                 else:
                     continue
                 flag = True
@@ -400,16 +397,9 @@ class Driver(object):
             self.Password_Done = False
         if not self.Password_Done:
             try:
-                if self.Wait(
-                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input"):
-                    self.Fill(
-                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(1) > div > div > input",
-                        DTCT["Vision_Username"], click=False, Enter=False)
-                    self.Fill(
-                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div:nth-child(2) > div > div > input",
-                        DTCT["Vision_Password"], click=False)
-                    self.ClickIf(
-                        "#visionAppRoot > div > div > div > div > form > div.sc-eNQAEJ.ifpxog > div.content.sc-hMqMXs.gNeJno > div > div.Loginstyle__ButtonContainer-pg1d8l-13.jRBrip > button")
+                if self.Wait('//*[@data-debug-id="usernameInput"]'):
+                    self.Fill('//*[@data-debug-id="usernameInput"]', DTCT["Vision_Username"], click=False, Enter=False)
+                    self.Fill('//*[@data-debug-id="passwordInput"]', DTCT["Vision_Password"], click=False)
             except:
                 print(getframeinfo(currentframe()).lineno, "Loading Vision took too much time!")
             try:
@@ -419,8 +409,7 @@ class Driver(object):
                     self.Close()
                     exit()
                 self.Vision()
-            except:
-                pass
+            except:pass
             self.start = time.perf_counter()
             self.Password_Done = True
         try:
@@ -816,23 +805,15 @@ class Driver(object):
     # _________DF_Screenshots_______________
 
     def DF_Configuration(self):
-        self.Click(
-            '#global-menu > nav > ul > li:nth-child(5) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.gzJDwN',
-            "CSS")
-        self.Click(
-            '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div',
-            Type="CSS")
+        self.Click('//*[@data-debug-id="DEFENSEFLOW_ICON"]')
+        self.Click('//*[@data-debug-id="DF_CONFIGURATION_ICON"]')
         if self.allure:
-            self.Click("gwt-debug-CloseDevicesTree")
+            self.ClickIf("gwt-debug-CloseDevicesTree")
 
     @prefix_decorator("DF_OP")
     def DF_Attack_Mitigation_Operation(self):
-        self.Click(
-            '#global-menu > nav > ul > li:nth-child(5) > div.sub-menu-children.sc-feryYK.cwTrTn > div > div > div.NavItemContentstyle__StyledIcon-ob11v-0.gzJDwN',
-            "CSS")
-        self.Click(
-            "#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(1) > div",
-            Type="CSS")
+        self.Click('//*[@data-debug-id="DEFENSEFLOW_ICON"]')
+        self.Click('//*[@data-debug-id="DF_OPERATION_ICON"]')
         self.Wait(
             "#df > div > div.dfc-main-content > div > div.dfc-dashboard-content > div > div:nth-child(1) > div > div.ReactVirtualized__Table__headerRow.sc-kPVwWT.cwEtzk",
             Type="CSS", delay=100)
