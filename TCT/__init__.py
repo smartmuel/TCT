@@ -822,6 +822,8 @@ class Driver(object):
         self.Click(
             '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div',
             Type="CSS")
+        if self.allure:
+            self.Click("gwt-debug-CloseDevicesTree")
 
     @prefix_decorator("DF_OP")
     def DF_Attack_Mitigation_Operation(self):
