@@ -632,11 +632,13 @@ class Driver(object):
                         break
                     except:
                         print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+            else:
+                return False
 
-            if ID == '#global-menu > nav > ul > li.sub-menu-expanded.sc-gldTML.bYAUWd > div.sc-cJOK.bVfJMK > div:nth-child(2) > div':
+            if '@data-debug-id="DF_CONFIGURATION_ICON"' in ID:
                 self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
 
-            elif ID == "gwt-debug-TopicsStack_TrafficMonitoring_tab":
+            elif "gwt-debug-TopicsStack_TrafficMonitoring_tab" in ID:
                 try:
                     myElem = self.driver.find_element_by_css_selector(
                         '#gwt-debug-TopicsNode_bdos-traffic-monitoring-reports-content')
@@ -650,9 +652,6 @@ class Driver(object):
                             self.Click("gwt-debug-TopicsStack_TrafficMonitoring_tab")
                     except:
                         pass
-
-            elif ID == 'gwt-debug-Global_defenseFlow_Old':
-                self.Wait("gwt-debug-TopicsNode_Configuration.Operation.PendingActions-content", "ID", delay=5)
 
             elif 'gwt-debug-DevicesTree_Node_' in ID:
                 self.Click("gwt-debug-SoftwareList")
@@ -668,6 +667,10 @@ class Driver(object):
 
             elif wait != "No":
                 self.Wait(wait)
+
+            return True
+
+
 
         elif "css" in Type:
             for i in range(1000):
