@@ -334,10 +334,10 @@ class Driver(object):
         options.add_argument('--ignore-certificate-errors')
         try:
             chromedriver_autoinstaller.install()
-            self.driver = webdriver.Chrome(chrome_options=chrome_options)
+            self.driver = webdriver.Chrome(chrome_options=options)
         except:
             try:
-                self.driver = webdriver.Chrome(DTCT["Driver_Path"], options=options)
+                self.driver = webdriver.Chrome(DTCT["Driver_Path"], chrome_options=options)
             except:
                 # finding chromedriver location
                 os.chdir(os.path.dirname(os.path.realpath(__file__)))
