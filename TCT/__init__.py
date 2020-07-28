@@ -371,6 +371,7 @@ class Driver(object):
         self.driver.fullscreen_window()
 
     def Screen_Size(self, size=100):
+        url = self.driver.current_url
         if size != 100:
             try:
                 self.Get("chrome://settings/")
@@ -384,6 +385,7 @@ class Driver(object):
             self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({self.base_resolution / 100:.1f});')
             # self.driver.execute_script("document.body.style.zoom='100%'")
             self.flag_change_size = False
+        self.Get(url)
 
     def Close(self):
         self.driver.close()
