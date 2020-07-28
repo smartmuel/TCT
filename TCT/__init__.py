@@ -163,7 +163,7 @@ except:
                     DTCT = Configuration(DTCT_Path)
 
 #Check if File Downloaded and if it a zip there is an extraction flag
-def file_check(extract=True, delay=5):
+def file_check(extract=True, delay=10):
     start = time.perf_counter()
     flag = False
     try:
@@ -933,10 +933,12 @@ class Driver(object):
     @prefix_decorator("DF_Analytics")
     def DF_Analytics(self):
         self.Screen_Size(90)
-        self.Get(f"https://{DTCT['Vision_IP']}/dfAnalytics")
-        self.Wait(
-            "#\\32 4307c07-ab22-4f0b-9f17-e9c7d7b48687 > div.wrapper > div > div.horizontal-legend.regular-mode > div > div:nth-child(2) > div > div",
-            delay=60)
+        self.Click('//*[@data-debug-id="ANALYTICS_AMS_ICON"]')
+        self.Click('//*[@data-debug-id="DEFENSEFLOW_ANALYTICS_ICON"]')
+        if self.allure:
+            for i in ("Top Attacks by Duration","Top Attack Sources","Top Attack Destination","Top Attacks by Rate","Top Attacks by Protocol","Top Attacks by Count"):
+                self.ClickIf(f'//*[@data-debug-id="Remove_widget_button_{i}"]')
+        self.Wait("#\\38 dfc1595-96dd-4963-9ea3-5c25a02180fa > div > div.card-content.sc-dTLGrV.lhKWBF > div > div > div.horizontal-legend.regular-mode > div > div:nth-child(4) > div",delay=10)
 
     ################################################################
     # _________External_Screenshots_______________
