@@ -148,6 +148,11 @@ except:
                         break
                 DTCT = Configuration(DTCT_Path)
             except:
+                user_confirmation = input('Do You want to use CLI to Build the configuration?[y/n]')
+                while user_confirmation.lower() not in "yn":
+                    user_confirmation = input('[y/n]')
+                if user_confirmation.lower() in "n":
+                    exit()
                 CLI.Json()
                 try:
                     with cd(Config_Json["Json_Folder_Path"]):
