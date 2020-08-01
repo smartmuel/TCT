@@ -14,7 +14,7 @@ from . import Config_JSON_CLI as CLI
 
 """cwd = current work directory"""
 cwd, DP_index, debug_prints_flag = os.getcwd(), "0", False
-print(f"cwd: {cwd}")
+print(f"\ncwd: {cwd}")
 
 with open("Config_Info.json", "r") as file:
     Config_Json = json.load(file)
