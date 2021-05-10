@@ -1391,8 +1391,10 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 class Syslog(object):
     
     def __init__(self):
-        Telnet.DP_Syslog_ADD()
-        Vision_API.Syslog_ADD()
+        try:
+            Vision_API.Syslog_ADD()
+        except:
+            print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
         t1 = threading.Thread(target=self.Server)
         t1.start()
 
@@ -1414,7 +1416,6 @@ class Syslog(object):
     # Closing the Server and Saves Configuration
     def DELETE(self):
         try:
-            Telnet.DP_Syslog_DELETE()
             Vision_API.Syslog_DELETE()
         except:
             print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
