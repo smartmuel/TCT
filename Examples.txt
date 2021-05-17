@@ -1,0 +1,32 @@
+* All the examples import the library with: "from TCT import *"
+
+Sending SSH commands:
+
+Best way:
+with CM.SSH(IP="",USER="", PASSWORD="") as ssh:
+	ssh.command("")
+	ssh.command("")
+	
+Another way:
+ssh = SSH(IP="",USER="", PASSWORD="")
+ssh.command("")
+ssh.command("")
+ssh.Close()
+
+==========================================================
+
+Sending Telnet commands:
+
+Best way:
+with CM.Telnet(HOST="", user="", password="") as telnet:
+    telnet.Command("")
+	telnet.Command("")
+	
+Another way:
+telnet = Telnet(HOST="",user="", password="")
+telnet.Command("")
+telnet.Command("")
+telnet.Close()
+
+==========================================================
+

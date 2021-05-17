@@ -1254,10 +1254,10 @@ class Vision_API(object):
     # flag that indicate the success of the login to vision
     flag = False
 
-    def __init__(self, Vision=DTCT["Vision_IP"]):
+    def __init__(self, Vision=DTCT["Vision_IP"], user = DTCT["Vision_Username"], password = DTCT["Vision_Password"]):
         self.Vision = Vision
         url = f"https://{self.Vision}/mgmt/system/user/login"
-        fill_json = {"username": DTCT["Vision_Username"], "password": DTCT["Vision_Password"]}
+        fill_json = {"username": user, "password": password}
         response = requests.post(url, verify=False, data=None, json=fill_json)
         # self.flag = response.status_code
         self.cookie = response.cookies
