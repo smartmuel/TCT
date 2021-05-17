@@ -3,14 +3,14 @@
 Sending SSH commands:
 
 Best way:
-with CM.SSH(IP="",USER="", PASSWORD="") as ssh:
+with CM.SSH(IP="ssh_ip", USER="username", PASSWORD="password") as ssh:
 	ssh.command("")
-	ssh.command("")
+	data = ssh.command("")
 	
 Another way:
-ssh = SSH(IP="",USER="", PASSWORD="")
+ssh = SSH(IP="ssh_ip", USER="username", PASSWORD="password")
 ssh.command("")
-ssh.command("")
+data = ssh.command("")
 ssh.Close()
 
 ==========================================================
@@ -18,15 +18,52 @@ ssh.Close()
 Sending Telnet commands:
 
 Best way:
-with CM.Telnet(HOST="", user="", password="") as telnet:
+with CM.Telnet(HOST="telnet_ip", user="username", password="password") as telnet:
     telnet.Command("")
-	telnet.Command("")
+	data = telnet.Command("")
 	
 Another way:
-telnet = Telnet(HOST="",user="", password="")
+telnet = Telnet(HOST="telnet_ip", user="username", password="password")
 telnet.Command("")
-telnet.Command("")
+data = telnet.Command("")
 telnet.Close()
 
 ==========================================================
 
+Sending Get command to Vision API:
+
+Best way:
+with CM.Vision_API(Vision = "vision_IP", user="username", password="password") as api:
+	data = api.Get("full_destination")
+	
+Another way:
+api = Vision_API(Vision="", user="username", password="password")
+data = api.Get("full_destination")
+api.Logout()
+	
+==========================================================
+
+Chrome automation:
+
+Best way:
+with CM.Chrome(url="URL or IP") as driver:
+	driver.Fill(ID="the_ID_of_an_element can be CSS,Xpath or id", Text="what_you_want_to_fill") 
+	driver.Click(ID="the_ID_of_an_element can be CSS,Xpath or id")
+
+Another way:
+driver = Driver(url = "URL or IP")
+driver.Fill(ID="the_ID_of_an_element can be CSS,Xpath or id", Text="what_you_want_to_fill") 
+driver.Click(ID="the_ID_of_an_element can be CSS,Xpath or id")
+driver.Close()
+
+==========================================================
+
+Starting/Stopping Breaking Point test:
+
+BP.Start(AppSim=[*], Session=[**], Test_Name = "Test name")
+BP.Stop()
+
+* Which Application Simulator to use.
+** Which Session Sender to use.
+
+==========================================================
