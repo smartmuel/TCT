@@ -30,6 +30,8 @@ class cd(object):
 
     def __exit__(self, type, value, traceback):
         os.chdir(cwd)
+
+
 # the IP that can connect to 8.8.8.8
 def get_ip_address():
     import socket
@@ -37,12 +39,14 @@ def get_ip_address():
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
 
+
 def ping(host):
     from platform import system
     param = '-n' if system().lower() == 'windows' else '-c'
     command = f"ping {param} 1 {host}"
     response = os.popen(command).read().lower()
     return 'unreachable' not in response and "100%" not in response
+
 
 # json read class
 class Configuration(object):
@@ -167,7 +171,8 @@ except:
                             break
                     DTCT = Configuration(DTCT_Path)
 
-#Check if File Downloaded and if it a zip there is an extraction flag
+
+# Check if File Downloaded and if it a zip there is an extraction flag
 def file_check(extract=True, delay=10):
     start = time.perf_counter()
     flag = False
@@ -196,6 +201,7 @@ def file_check(extract=True, delay=10):
         print(getframeinfo(currentframe()).lineno, "Unexpected error:", exc_info()[0], exc_info()[1])
     finally:
         return flag
+
 
 # Context Managers Class
 class CM(object):
@@ -252,8 +258,8 @@ class CM(object):
 
     # Vision_API Context Manager
     class Vision_API(object):
-        def __init__(self, Vision=DTCT["Vision_IP"]):
-            self.api = Vision_API(Vision=Vision)
+        def __init__(self, Vision=DTCT["Vision_IP"], user=DTCT["Vision_Username"], password=DTCT["Vision_Password"]):
+            self.api = Vision_API(Vision=Vision, user=user, password=password)
 
         def __enter__(self):
             return self.api
@@ -277,6 +283,7 @@ class CM(object):
                 time.sleep(self.TIME - int(time.perf_counter() - self.start))
             except:
                 pass  # silenced
+
 
 # Decorator for ScreenShots and more
 def prefix_decorator(prefix=""):
@@ -314,6 +321,7 @@ def prefix_decorator(prefix=""):
 
     return decorator_test
 
+
 class Driver(object):
 
     def __init__(self, Name="Test", url="", allure=False, Headless_Flag=False, base_resolution=100):
@@ -325,7 +333,8 @@ class Driver(object):
             os.mkdir("ScreenShots")
         except FileExistsError:
             pass
-        self.path, self.flag_change_size,self.base_resolution, self.start = os.path.join(cwd, "ScreenShots"), False,base_resolution, time.perf_counter()
+        self.path, self.flag_change_size, self.base_resolution, self.start = os.path.join(cwd,
+                                                                                          "ScreenShots"), False, base_resolution, time.perf_counter()
 
         # Opening Chrome Driver
         options = Options()
@@ -361,7 +370,7 @@ class Driver(object):
         self.Name, self.Main_Name, self.Password_Done, self.allure, self.image = Name, Name.split("_")[
             0], False, allure, None
         if self.allure:
-            self.driver.set_window_size(1920,1080,self.driver.window_handles[0])
+            self.driver.set_window_size(1920, 1080, self.driver.window_handles[0])
         if self.base_resolution != 100:
             self.Screen_Size()
         self.Get(url) if url else self.Vision()
@@ -380,7 +389,8 @@ class Driver(object):
         if size != 100:
             try:
                 self.Get("chrome://settings/")
-                self.driver.execute_script(f'chrome.settingsPrivate.setDefaultZoom({(size*self.base_resolution) / 10000:.1f});')
+                self.driver.execute_script(
+                    f'chrome.settingsPrivate.setDefaultZoom({(size * self.base_resolution) / 10000:.1f});')
                 # self.driver.execute_script(f"document.body.style.zoom='{size}%'")
                 self.flag_change_size = True
             except:
@@ -416,7 +426,8 @@ class Driver(object):
                     self.Close()
                     exit()
                 self.Vision()
-            except:pass
+            except:
+                pass
             self.start = time.perf_counter()
             self.Password_Done = True
         try:
@@ -624,21 +635,21 @@ class Driver(object):
                         self.driver.find_element_by_css_selector(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                 elif ID[0] == "/":
                     try:
                         self.Wait(ID)
                         self.driver.find_element_by_xpath(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                 else:
                     try:
                         self.Wait(ID)
                         self.driver.find_element_by_id(ID).click()
                         break
                     except:
-                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                        print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
             else:
                 return False
 
@@ -687,7 +698,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
@@ -706,7 +717,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                     # Fail = True
             else:
                 if ID == 'gwt-debug-TopicsNode_traffic-utilization-report-content':
@@ -757,7 +768,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
@@ -772,7 +783,7 @@ class Driver(object):
                     # Fail = False
                     break
                 except:
-                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}",   ID)
+                    print(getframeinfo(currentframe()).lineno, f"Failed to Click_{str(i)}", ID)
                     # Fail = True
             else:
                 print(getframeinfo(currentframe()).lineno, "Didn't click " + Type + " " + ID)
@@ -943,9 +954,12 @@ class Driver(object):
         self.Click('//*[@data-debug-id="ANALYTICS_AMS_ICON"]')
         self.Click('//*[@data-debug-id="DEFENSEFLOW_ANALYTICS_ICON"]')
         if self.allure:
-            for i in ("Top Attacks by Duration","Top Attack Sources","Top Attack Destination","Top Attacks by Rate","Top Attacks by Protocol","Top Attacks by Count"):
+            for i in ("Top Attacks by Duration", "Top Attack Sources", "Top Attack Destination", "Top Attacks by Rate",
+                      "Top Attacks by Protocol", "Top Attacks by Count"):
                 self.ClickIf(f'//*[@data-debug-id="Remove_widget_button_{i}"]')
-        self.Wait("#\\38 dfc1595-96dd-4963-9ea3-5c25a02180fa > div > div.card-content.sc-dTLGrV.lhKWBF > div > div > div.horizontal-legend.regular-mode > div > div:nth-child(4) > div",delay=10)
+        self.Wait(
+            "#\\38 dfc1595-96dd-4963-9ea3-5c25a02180fa > div > div.card-content.sc-dTLGrV.lhKWBF > div > div > div.horizontal-legend.regular-mode > div > div:nth-child(4) > div",
+            delay=10)
 
     ################################################################
     # _________External_Screenshots_______________
@@ -1254,7 +1268,7 @@ class Vision_API(object):
     # flag that indicate the success of the login to vision
     flag = False
 
-    def __init__(self, Vision=DTCT["Vision_IP"], user = DTCT["Vision_Username"], password = DTCT["Vision_Password"]):
+    def __init__(self, Vision=DTCT["Vision_IP"], user=DTCT["Vision_Username"], password=DTCT["Vision_Password"]):
         self.Vision = Vision
         url = f"https://{self.Vision}/mgmt/system/user/login"
         fill_json = {"username": user, "password": password}
@@ -1389,7 +1403,7 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
 
 
 class Syslog(object):
-    
+
     def __init__(self):
         try:
             Vision_API.Syslog_ADD()
@@ -1403,7 +1417,8 @@ class Syslog(object):
         try:
             try:
                 os.remove("syslog_AMS.log")
-            except:pass#Silenced
+            except:
+                pass  # Silenced
             logging.basicConfig(level=logging.INFO, format='%(message)s', datefmt='', filename=DTCT["LOG_FILE"],
                                 filemode='a')
             self.server = socketserver.UDPServer((DTCT["Syslog_IP"], 514), SyslogUDPHandler)
