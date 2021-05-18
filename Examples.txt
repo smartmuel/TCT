@@ -3,7 +3,7 @@
 Sending SSH commands:
 
 Best way:
-with CM.SSH(IP="ssh_ip", USER="username", PASSWORD="password") as ssh:
+with CM.SSH(IP="ssh_ip", user="username", password="password") as ssh:
 	ssh.command("")
 	data = ssh.command("")
 	
@@ -18,7 +18,7 @@ ssh.Close()
 Sending Telnet commands:
 
 Best way:
-with CM.Telnet(HOST="telnet_ip", user="username", password="password") as telnet:
+with CM.Telnet(IP="telnet_ip", user="username", password="password") as telnet:
     telnet.Command("")
 	data = telnet.Command("")
 	
