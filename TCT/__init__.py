@@ -236,8 +236,8 @@ class CM(object):
 
     # SSH Context Manager
     class SSH(object):
-        def __init__(self, IP=DTCT["SSH_IP"], USER=DTCT["SSH_Username"], PASSWORD=DTCT["SSH_Password"]):
-            self.ssh = SSH(IP=IP, USER=USER, PASSWORD=PASSWORD)
+        def __init__(self, IP=DTCT["SSH_IP"], user=DTCT["SSH_Username"], password=DTCT["SSH_Password"]):
+            self.ssh = SSH(IP=IP, USER=user, PASSWORD=password)
 
         def __enter__(self):
             return self.ssh
@@ -247,8 +247,8 @@ class CM(object):
 
     # Telnet Context Manager
     class Telnet(object):
-        def __init__(self, HOST, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
-            self.telnet = Telnet(HOST=HOST, user=user, password=password)
+        def __init__(self, IP, user=DTCT["DP_Username"], password=DTCT["DP_Password"]):
+            self.telnet = Telnet(HOST=IP, user=user, password=password)
 
         def __enter__(self):
             return self.telnet
