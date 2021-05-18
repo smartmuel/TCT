@@ -19,7 +19,7 @@ Sending Telnet commands:
 
 Best way:
 with CM.Telnet(IP="telnet_ip", user="username", password="password") as telnet:
-    telnet.Command("")
+	telnet.Command("")
 	data = telnet.Command("")
 	
 Another way:
